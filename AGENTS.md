@@ -89,8 +89,13 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   `results.jsonl` ledger, `--transfer <suite>` for an OOD read per trial, `--aggregate` to rank an existing directory,
   `--resume` for interrupted trials (evaluation; unfinished full-weight trials continue training from their resume point),
   `--wait-pid` to queue behind a training job). A full-weight trial runs under torchrun on every GPU of its container,
-  writes a resume point every `experiment.RESUME_MINUTES` and is retried by Modal after a timeout (`kev.budget`:
-  `FULL_FT_RETRIES`, up to 24 h per attempt, $1,000 per study; the bound counts every attempt); each retry continues.
+  writes a resume point every `experiment.RESUME_MINUTES` and is continued after a timeout by `kev.rounds watch`, not by
+  Modal (`kev.budget`: `FULL_FT_RETRIES` continuations, up to 24 h per attempt, $1,000 per study; the bound counts every
+  attempt): trials spawn with Modal's retries off, because Modal charged each killed timed-out attempt twice and gave
+  round 22's trial two of its three attempts (`scripts/modal_retry_probe.py`); `runs/<study>.spawn.json` is the attempt
+  ledger (`calls` = each trial's current call, `attempts` = all of them), and `modal_app.py::resume --trial <label>`
+  (`modal_app.continue_full_trial`, what `watch` runs) spawns the next attempt only after a call ended by a timeout,
+  within the ledger, with the study's GPU and timeout; `--beyond-bound` continues a trial without a ledger, uncounted. Each attempt is written to the ledger pending (a nonce) before its spawn; a pending entry blocks continuations until its call is adopted from the lease or it is `kev.budget.LEASE_STALE` old. The lease: every full-weight attempt holds `<study>/<trial>/attempt.json` on the `kev-leases` volume (`modal_app.TrialLease`: nonce, attempt, call id, heartbeat every `LEASE_HEARTBEAT` s from its own thread, marked ended on a clean exit); an attempt that finds another attempt's lease fresher than `LEASE_STALE` (900 s) returns `{"refused": ...}` without touching the trial, and `continue_full_trial` waits (bounded) for the old lease to end or go stale, so a continuation starts only after the old container is gone.
   It also keeps snapshots at `experiment.SNAPSHOT_FRACTIONS` (0.25, 0.5, 0.75 of its optimizer steps) in
   `<trial>/snapshots/step-<N>/checkpoint` (plan keys `snapshot_fractions` (a string, `"none"` for none) and
   `snapshot_every_steps`, which needs `max_steps` so `validated_trial` can check `MAX_SNAPSHOTS`; neither changes the
@@ -103,8 +108,8 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   `modal_app.py::mirror_snapshots --study X [--paths /runs/...checkpoint] [--repo jaredpalmer/kev-snapshots] [--dry-run]`
   (re)uploads existing ones (a 27B checkpoint is ~51 GB; ask before mirroring those).
   The container commits the runs volume after every completed resume point and snapshot (a timeout skips the final commit); an attempt
-  that fails with an error writes `failed.json` and returns `{"failed": ...}` instead of raising, so it is not retried
-  (`kev.rounds.poll_modal` reports it as a failure). `modal_app.py::pull` (and `kev.rounds watch`) leaves full-weight
+  that fails with an error writes `failed.json` and returns `{"failed": ...}` instead of raising, so it is never continued
+  (`kev.rounds.poll_modal` reports it as a failure; a timeout it reports as `"timeout"`). `modal_app.py::pull` (and `kev.rounds watch`) leaves full-weight
   shards (`model*.safetensors` directly in a `checkpoint/` directory: final and snapshots) and resume points on the volume (`--weights` copies them);
   read a snapshot like any checkpoint: `::benchmarks --jobs "/runs/<study>/<trial>/snapshots/step-<N>/checkpoint@<suite>@<name>"`.
 - Rounds (every registered experiment since round 5): one spec per round, `experiments/rounds/r<N>.json`, committed before any
@@ -113,7 +118,7 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   (panels of reads, bootstrapped metrics, criteria on paired bounds, rank) and confirmation stages. `kev/rounds.py` is the
   one engine: `uv run python -m kev.rounds {validate,launch,watch,launch-reads,readout,confirm} <spec>`; `watch` polls the
   spawned trials (state in `runs/<study>.watch.json`, resumable; DNS/connection errors retried, a trial's own exception is a
-  failure), pulls each finished trial's study (one pull per study at a time, `modal_app.pull_lock`) and launches its reads once (per-arm lock; the
+  failure, a timed-out full-weight trial gets its next attempt within the spawn record's ledger), pulls each finished trial's study (one pull per study at a time, `modal_app.pull_lock`) and launches its reads once (per-arm lock; the
   launch intent is written first to `runs/r<N>-reads-<arm>.json`, and an arm launched within its reads' timeout is not relaunched; a
   finished call that maps to no arm is logged and makes `watch` exit non-zero),
   60 s apart, then writes `runs/r<N>-readout/round<N>.json`; `confirm <spec> --stage <s>` writes `runs/r<N>-verdict/<size>-<s>.json`.
