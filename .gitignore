@@ -286,3 +286,39 @@ evals/sft-v2-r22/*.jsonl
 evals/ood-v2/*.jsonl
 evals/agents-ood-v1/*.jsonl
 evals/guardrails-ood-v1/*.jsonl
+# round 24 (experiments/rounds/r24.json, a retrospective selection over existing reads). Private (never in git): the
+# tasksource-heldout exclusion list (runs/r24-private/; jaredpalmer/kev-private-train runs/r24/, manifest
+# runs/r24-readout/private-exclude.json), every tasksource-heldout-v1 read (its rows and report name the private families)
+# and the ood / agents-ood / guardrails-ood rows (held-out records of sft-v2's private components; manifest
+# runs/r24-readout/private-rows.json). Committed: the read-out, the manifests, and the public reads it scores: round 22's
+# and the 2026-09-27 sweep's report + rows (OOD reads: reports only), round 22's final trial's in-trial transfer rows and
+# provenance (as round 22's record keeps them).
+runs/r24-private/
+!runs/r24-readout/
+!runs/r24-readout/round24.json
+!runs/r24-readout/readout.txt
+!runs/r24-readout/private-exclude.json
+!runs/r24-readout/private-rows.json
+!runs/sweep-*/
+runs/sweep-*/*
+!runs/sweep-*/report.json
+!runs/sweep-*/rows.json
+runs/sweep-*-tsheld/
+runs/sweep-*-ood/rows.json
+runs/sweep-*-agentsood/rows.json
+runs/sweep-*-guardood/rows.json
+!runs/r22-27b-*/
+runs/r22-27b-*/*
+!runs/r22-27b-*/report.json
+!runs/r22-27b-*/rows.json
+runs/r22-27b-*-tsheld/
+runs/r22-27b-*-ood/rows.json
+runs/r22-27b-*-agentsood/rows.json
+runs/r22-27b-*-guardood/rows.json
+runs/r21-P27-tsheld/
+!runs/r22-27b-lr2e6/00-trial-0/
+runs/r22-27b-lr2e6/00-trial-0/*
+!runs/r22-27b-lr2e6/00-trial-0/provenance.json
+!runs/r22-27b-lr2e6/00-trial-0/transfer/
+runs/r22-27b-lr2e6/00-trial-0/transfer/*
+!runs/r22-27b-lr2e6/00-trial-0/transfer/rows.json

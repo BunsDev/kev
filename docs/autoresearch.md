@@ -221,6 +221,10 @@ At the end of the session (and in the state file as it goes):
 - **Long-context calibration.** A panel with `"by_length": true` reports accuracy, ECE, Brier and confident errors per
   state-token bucket (under 8k to 64k+, and the 8k+/16k+/32k+ tails), and a criterion can gate one
   (`long.ece_16k_plus.candidate <= 0.05`). Tokens are counted from the reads' suite records, so both sides share buckets.
+- **Suite fixes without a new suite version.** A panel can drop sources, tasks or a (private, hash-registered) list of ids
+  or sources on both sides (`exclude_sources`, `exclude_tasks`, `exclude_file`), and a report-only panel is marked
+  `"optional": true` so a missing report read never makes a candidate incomplete. Choose exclusions on label validity
+  before any read-out under them (round 24 took them from the 2026-09-27 audit), and never commit a private list.
 - **Workspace capacity.** The workspace has run at most about ten GPU containers at once; pending containers are capacity,
   not a bug, so do not relaunch them.
 - **Small suites.** A guard on 89 or 144 questions cannot resolve a 2-3 pp floor; gate them through a pooled panel.

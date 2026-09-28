@@ -143,7 +143,12 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   `"by_length": true` (or `{edges, tokenizer}`) adds acc / ECE / Brier / confident errors per state-token bucket
   (`kev.metrics.calibration_by_length`: under_8k, 8k_16k, 16k_32k, 32k_64k, 64k_plus and the tails 8k_plus/16k_plus/32k_plus;
   tokens = the encoded state segment, `<state>` included, as `kev.model.encode` builds it and `kev.serve` reports it, counted from the reads' suite records with `kev.suite.ADMISSION_TOKENIZER` unless given), and a criterion may read a
-  bucket (`long.ece_16k_plus.candidate <= 0.05`). An arm may be a checkpoint without a trial (`"checkpoint": "/runs/..."`, its "transfer" rows
+  bucket (`long.ece_16k_plus.candidate <= 0.05`). Panel filters (round 24, `kev.rounds.panel_filter`; the same rows leave both sides):
+  `source` (a name or a list), `exclude_sources`, `exclude_tasks`, and `exclude_file` `{path, sha256}` (a JSON of `ids` /
+  `sources` / `tasks`, checked against its hash; a private list, e.g. tasksource-heldout families, stays out of git and is
+  restored with `scripts/private_rows.py`, so the public spec carries only the path and a salted file's sha256); `"optional": true`
+  marks a report-only panel that no criterion or rank may read and whose absent reads never leave an arm incomplete; the
+  `temperature` pool's `ci: {level, samples, seed}` adds each arm's bootstrap interval of its pooled T (`temperature_ci`). An arm may be a checkpoint without a trial (`"checkpoint": "/runs/..."`, its "transfer" rows
   from a `transfer_read`), e.g. a WiSE-FT interpolation (`scripts/interpolate_checkpoint.py`, `modal_app.py::interpolate`);
   deltas are `kev.rounds.paired` (2,000 resamples, seed 0, micro). Rounds 5-18 are recorded specs (`"archive": "research-archive-2026-09-24"`): their plans, reads, data builders
   and per-round scripts live on that git tag, not on main; `validate` lists what this checkout lacks instead of failing, and

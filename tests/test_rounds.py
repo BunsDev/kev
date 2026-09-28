@@ -609,6 +609,21 @@ def test_readout_reproduces_round_20():
     assert report["ranking"] == committed["ranking"] and report["candidates"] == committed["candidates"] == {"27b": None}
 
 
+def test_readout_reproduces_round_24():
+    """Round 24 (a retrospective selection over existing reads) reads a private exclusion list and private rows (every
+    tasksource-heldout-v1 read and the ood / agents-ood / guardrails-ood rows), restored from the private dataset their
+    manifests name; the test skips for an account without access. The CUAD by-length panel also needs longdoc-v1's private
+    development partition (kev.suite fetches it)."""
+    from scripts.private_rows import restore
+    try:
+        for manifest in ("runs/r24-readout/private-exclude.json", "runs/r24-readout/private-rows.json"): restore(manifest, ROOT)
+    except PermissionError as error:
+        pytest.skip(str(error))
+    report = rounds.readout(rounds.load(ROOT / "experiments/rounds/r24.json"), ROOT)
+    assert same(report, read_json(ROOT / "runs/r24-readout/round24.json"))
+    assert report["candidates"] == {"27b": "27b-r22-final"} and report["ranking"] == {"27b": ["27b-r22-final", "27b-r20a-w85"]}
+
+
 # --- temperature pools, transfer reads and checkpoints without a trial (round 20) -------------------------------------
 
 def _rows(root, d, ids, seed, scale=1.0, source="s"):
@@ -734,6 +749,101 @@ def test_validation_of_pools_transfer_reads_and_trialless_arms(tmp_path):
         assert expected in problems, expected
     del spec["temperature"]
     assert "arm x-wise: no trial, so no development rows to fit its temperature on" in "\n".join(rounds.validate(spec, tmp_path, rows=False, plans=False).problems)
+
+
+# --- panel exclusions, report-only panels and the temperature's interval (round 24) -----------------------------------
+
+def _excluding_round(root):
+    """The pool round with a main read of four sources on both sides (a, b, c, d; d's rows are task d1 or d2) and a private
+    exclusion list (sources c, record m/1) registered by path and sha256."""
+    from kev.suite import digest
+    spec = _pool_round(root)
+    for d, seed in (("runs/p-main", 5), ("runs/r99-x-trained-main", 6), ("runs/r99-x-wise-main", 7)):
+        rows = _rows(root, d, [f"m/{i}" for i in range(80)], seed)
+        for i, r in enumerate(rows): r.update(source="abcd"[i % 4], task="abcd"[i % 4] + ("2" if i % 8 == 7 else "1" if i % 4 == 3 else ""))
+        write_json(root / d / "rows.json", rows)
+    (root / "private").mkdir()
+    write_json(root / "private/exclude.json", {"salt": "x", "sources": ["c"], "ids": ["m/1"]})
+    spec["rule"]["panels"]["main"].update(exclude_sources=["a"], exclude_tasks=["d2"], exclude_file={"path": "private/exclude.json", "sha256": digest(root / "private/exclude.json")})
+    return spec
+
+
+def test_panel_exclusions_leave_both_sides_alike(tmp_path):
+    """exclude_sources, exclude_tasks and exclude_file drop the same rows from candidate and parent, so the paired delta is the
+    one on the kept rows; the panel records how many questions they removed."""
+    spec = _excluding_round(tmp_path)
+    assert rounds.validate(spec, tmp_path, plans=False).problems == []
+    wise = rounds.readout(spec, tmp_path)["arms"]["x-wise"]
+    kept = lambda r: r["source"] not in ("a", "c") and r["task"] != "d2" and r["id"] != "m/1"
+    side, parent = rounds.arm_side(spec, "x-wise", tmp_path), rounds.parent_side(spec, "x-wise", tmp_path)
+    c = [r for tag in ("main", "transfer") for r in side.served(tag) if kept(r)]
+    p = [r for tag in ("main", "transfer") for r in parent.served(tag) if kept(r)]
+    main = wise["panels"]["main"]
+    assert main["n"] == len(c) == 40 + 19 + 10 and main["excluded"] == 51   # transfer (40) + b (20 less m/1) + d1 (10); a, c and d2 removed
+    assert main["acc"]["delta"] == rounds.paired(c, p, "acc")["delta"] and main["acc"]["ci95"] == rounds.paired(c, p, "acc")["ci95"]
+    assert rounds.readout({**spec, "rule": {**spec["rule"], "panels": {"main": {k: v for k, v in spec["rule"]["panels"]["main"].items() if k not in rounds.EXCLUDE_KEYS}}}}, tmp_path)["arms"]["x-wise"]["panels"]["main"]["n"] == 120
+
+
+def test_an_exclude_file_is_checked_against_its_hash_and_may_be_absent(tmp_path):
+    """A private exclusion list is registered by its sha256: a changed file is refused; an absent one (no access) leaves the
+    arm incomplete and is listed like absent rows, never silently ignored."""
+    spec = _excluding_round(tmp_path)
+    write_json(tmp_path / "private/exclude.json", {"salt": "y", "sources": ["c"], "ids": ["m/1"]})
+    assert any("does not match its registered sha256" in p for p in rounds.validate(spec, tmp_path, plans=False).problems)
+    with pytest.raises(ValueError, match="does not match the sha256"):
+        rounds.readout(spec, tmp_path)
+    (tmp_path / "private/exclude.json").unlink()
+    problems, archived = rounds.validate(spec, tmp_path, plans=False)
+    assert any("exclude_file private/exclude.json not in this checkout" in p for p in problems)
+    assert any("exclude_file" in p for p in rounds.validate({**spec, "archive": "tag"}, tmp_path, plans=False).archived)
+    wise = rounds.readout(spec, tmp_path)["arms"]["x-wise"]
+    assert (wise["complete"], wise["passed"], wise["missing"]) == (False, False, ["exclude_file:private/exclude.json"])
+    assert rounds.validate(spec, tmp_path, rows=False, plans=False).problems == []   # structure only: the list may be private
+
+
+def test_malformed_filters_and_unknown_excluded_sources_are_problems(tmp_path):
+    spec = _excluding_round(tmp_path)
+    main = spec["rule"]["panels"]["main"]
+    main.update(exclude_sources=["mmlu", "emotoin"], exclude_tasks="d2", exclude_file={"path": "private/exclude.json"}, source=[])
+    problems = "\n".join(rounds.validate(spec, tmp_path, rows=False, plans=False).problems)
+    for expected in ("exclude_tasks is a non-empty list", "exclude_file is {path, sha256}", "source is a source name or a non-empty list"):
+        assert expected in problems, expected
+    assert "emotoin" not in problems   # "transfer" names no suite here (the arms' transfer_read differ), so the names cannot be checked
+    spec["transfer_read"] = "transfer4"   # one transfer read for the round: transfer-v4's manifest lists the sources
+    assert "exclude_sources name ['emotoin'], which no read of the panel lists" in "\n".join(rounds.validate(spec, tmp_path, rows=False, plans=False).problems)
+
+
+def test_an_optional_panel_is_reported_and_never_blocks(tmp_path):
+    """A report-only panel (optional) whose reads are absent leaves the comparison complete; a criterion or the rank may not
+    read one."""
+    spec = _pool_round(tmp_path)
+    spec["reads"]["extra"] = {"suite": "evals/v4/transfer-v4"}
+    spec["rule"]["panels"]["extra"] = {"reads": ["extra"], "metrics": ["acc"], "optional": True}
+    spec["parents"]["p"]["reads"]["extra"] = "runs/p-extra"
+    assert rounds.validate(spec, tmp_path, plans=False).problems == []   # the parent's optional read may be absent too
+    wise = rounds.readout(spec, tmp_path)["arms"]["x-wise"]
+    assert wise["complete"] and wise["passed"] is not None and "extra" not in wise["panels"]
+    assert wise["missing"] == [] and wise["missing_optional"] == ["candidate:runs/r99-x-wise-extra", "parent:runs/p-extra"]
+    _rows(tmp_path, "runs/p-extra", [f"e/{i}" for i in range(30)], 12); _rows(tmp_path, "runs/r99-x-wise-extra", [f"e/{i}" for i in range(30)], 13)
+    assert rounds.readout(spec, tmp_path)["arms"]["x-wise"]["panels"]["extra"]["n"] == 30
+    spec["rule"]["rank"] = [{"by": ["main.acc.delta", "extra.acc.delta"]}]
+    assert any("panel extra: optional (report only), but a criterion or the rank reads it" in p for p in rounds.validate(spec, tmp_path, rows=False, plans=False).problems)
+
+
+def test_the_pooled_temperature_carries_its_bootstrap_interval(tmp_path):
+    """temperature.ci adds each arm's percentile interval of its pooled T (cluster resamples within each source, the same grid
+    and objective); report only: the temperature, the panels and the verdict are unchanged."""
+    spec = _pool_round(tmp_path)
+    before = rounds.readout(spec, tmp_path)["arms"]["x-wise"]
+    spec["temperature"]["ci"] = {"level": 0.9, "samples": 200, "seed": 0}
+    assert rounds.validate(spec, tmp_path, plans=False).problems == []
+    after = rounds.readout(spec, tmp_path)["arms"]["x-wise"]
+    ci = after.pop("temperature_ci")
+    assert after == before
+    assert ci["lower"] <= after["temperature"] <= ci["upper"] and ci["lower"] < ci["upper"] and ci["questions"] == 110 and ci["samples"] == 200
+    assert rounds.pooled_temperature_ci(rounds.arm_side(spec, "x-wise", tmp_path).pool, tmp_path) == ci   # seeded
+    spec["temperature"]["ci"] = {"level": 90}
+    assert "temperature: ci is {level (0-1), samples (> 0), seed}" in rounds.validate(spec, tmp_path, rows=False, plans=False).problems
 
 
 # --- the temperature pool against training data (round 19's failure mode) ---------------------------------------------
