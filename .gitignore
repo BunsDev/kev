@@ -344,3 +344,66 @@ runs/r22-27b-lr2e6/00-trial-0/transfer/*
 runs/r22-27b-lr2e6/00-trial-0/calibration/*
 !runs/r22-27b-lr2e6/00-trial-0/calibration/temperature.json
 !runs/r22-27b-lr2e6/00-trial-0/snapshots/
+# round 23 (experiments/rounds/r23.json): the read-out, its table and private-rows manifest; each candidate's
+# interpolation report (runs/r23-wise/<arm>/interpolation.json; the checkpoints stay on the kev-runs volume); the read
+# launch records; every public-suite read's report + rows; the ood-v2 / agents-ood-v1 / guardrails-ood-v1 reads' reports
+# (aggregates only). Private (jaredpalmer/kev-private-train runs/r23/, runs/r23-readout/private-rows.json,
+# scripts/private_rows.py restore): every tasksource-heldout-v1 read (its rows and report name the private families) and
+# the ood / agents-ood / guardrails-ood rows. Confirmation (runs/r23-verdict/, runs/r23c-*): as round 24's.
+!runs/r23-readout/
+runs/r23-readout/*
+!runs/r23-readout/round23.json
+!runs/r23-readout/readout.txt
+!runs/r23-readout/tables.md
+!runs/r23-readout/private-rows.json
+!runs/r23-wise/
+!runs/r23-wise/*/
+runs/r23-wise/*/*
+!runs/r23-wise/*/interpolation.json
+!runs/r23-reads-*.json
+!runs/r23-27b-*/
+runs/r23-27b-*/*
+!runs/r23-27b-*/report.json
+!runs/r23-27b-*/rows.json
+runs/r23-27b-*-tsheld/
+runs/r23-27b-*-ood/rows.json
+runs/r23-27b-*-agentsood/rows.json
+runs/r23-27b-*-guardood/rows.json
+# tasksource-heldout-v1 test reads (rounds 23 and 24's confirmations): private, never in git
+runs/r24c-*-tshtest/
+runs/r23c-*-tshtest/
+# round 23's confirmation of 27b-k-w85: the verdicts, the T-interval table and the private-rows manifests; the launch
+# records (runs/r23-reads-*-{tests,locked}.json, above); the public test reads (rows for hard-v1, devtools-v1 and
+# documents-v1, reports for breadth-v1, documents-v2 and longdoc-v1); the locked read; the test breadth report; the serving
+# reports. Private (jaredpalmer/kev-private-train runs/r23/): tasksource-heldout-v1 test rows and report, breadth-v1 test
+# rows, documents-v2 rows (runs/r23-verdict/private-rows.json) and longdoc-v1 test rows (private-rows-longdoc.json).
+!runs/r23-verdict/
+runs/r23-verdict/*
+!runs/r23-verdict/27b-tests.json
+!runs/r23-verdict/27b-locked.json
+!runs/r23-verdict/27b-tests-t-interval.json
+!runs/r23-verdict/private-rows.json
+!runs/r23-verdict/private-rows-longdoc.json
+!runs/r23c-27b-cand-*/
+runs/r23c-27b-cand-*/*
+!runs/r23c-27b-cand-*/report.json
+!runs/r23c-27b-cand-hardtest/rows.json
+!runs/r23c-27b-cand-devtest/rows.json
+!runs/r23c-27b-cand-docs1test/rows.json
+!runs/r23-breadth-report/
+runs/r23-breadth-report/*
+!runs/r23-breadth-report/report.md
+!runs/r23-breadth-report/report.json
+!runs/serving-27b-r23/
+runs/serving-27b-r23/*
+!runs/serving-27b-r23/report.json
+!runs/serving-27b-r23-long/
+runs/serving-27b-r23-long/*
+!runs/serving-27b-r23-long/report.json
+!runs/locked/kev-27b-r23-ungated/
+runs/locked/kev-27b-r23-ungated/*
+!runs/locked/kev-27b-r23-ungated/summary.json
+!runs/locked/kev-27b-r23-ungated/transfer/
+runs/locked/kev-27b-r23-ungated/transfer/*
+!runs/locked/kev-27b-r23-ungated/transfer/rows.json
+runs/r23c-*-tshtest/
