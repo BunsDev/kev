@@ -77,6 +77,8 @@ cards. Previous weights are Hub tags (`kev-4b@r8-documents-release`, `kev-4b@nig
   (`research/overnight-r6`); read it out there with `uv run python -m kev.rounds readout experiments/rounds/r17.json --root
   <research checkout>`. Main's harness refuses to launch reads for a recorded round, so a confirmation, if arm (b) passes,
   would be launched from that checkout.
+- **scienthoon removed** (2026-09-27): `evals/external/scienthoon-v1` is no longer a Kev eval; past verdicts stand, and from
+  round 23 the pooled external guard is SemIf + WANLI-v2 + TypeSafe ("scienthoon removed" below).
 - Decisions waiting on Jared: upload the documents-v1 and hard-v1 train partitions to `jaredpalmer/kev-suites` and bump
   `SUITES_REVISION` (see Next); submit Kev-27B (and the new 4B / 0.8B) to the Decision Index.
 - Spend: Modal metered $2,668.52 at 2026-09-26T13:42Z (round 22's registration reading: round 21's failed trials and parent
@@ -206,6 +208,12 @@ These are the methods that held up. `docs/autoresearch.md` turns them into an op
   models may judge or filter evaluation labels only.
 - **Frozen files never change.** New data is a new versioned directory with a manifest (sha256 of every partition and of the
   inputs); defects found later are documented, not fixed in place.
+- **A suite found unsound as a gate is removed, not patched, and past verdicts stand.** Its directory and scripts leave the
+  repo and it is listed in `kev.suite.REMOVED_SUITES` with the reason and the last round that read it. Rounds up to that one
+  keep their registered rules and committed rows (`kev.rounds validate` lists the read as archived; read-outs reproduce from
+  the rows). `load_split` refuses the suite, and `validate` / `launch` refuse any later round that names it.
+  `evals/external/scienthoon-v1` was removed on 2026-09-27 (last read: round 22; "scienthoon removed" below). From round 23
+  the pooled external guard is SemIf + WANLI-v2 + TypeSafe, and there is no scienthoon guard.
 - **Budgets and state.** A spend authorization per session, checked before every launch against metered spend plus running
   admission bounds; a state file with every spawn id, bound, pull and read.
 - **Report negative results as fully as positive ones**, in PLAN.md, with the failed criterion.
@@ -374,7 +382,7 @@ Accuracies (arm, with Kev-27B's in brackets). Breadth: 0.760 / 0.759 / 0.762 / 0
 
 Most of the interpolations' extra index is Retrieval & Classification: SGD 0.647 (Kev-27B) → 0.807 (a-w50) / 0.793 (b-w50), against Jev's 0.793.
 
-**Scienthoon analysis** (report only, committed rows, no new reads; `runs/r20-scienthoon/analysis.md`, numbers in `drift.json`, `scripts/scienthoon_drift.py`):
+**Scienthoon analysis** (report only, committed rows, no new reads; `runs/r20-scienthoon/analysis.md`, numbers in `drift.json`, `scripts/scienthoon_drift.py`, removed with the suite on 2026-09-27 and in git history at `9c41005`):
 - **The loss is one question type.** On `angry` ("The customer sounds angry.") the round-19/20 arms lose 5.8-13.1 pp. `queue` gains one question, and `priority` (whose label follows a rule absent from the text) moves −3.1 to +1.7. Without `angry` the arms sit at −1.4 to +1.0 pp.
 - **What goes wrong.** The arms call a calm ticket about a real problem angry. Examples: "The box for order #8223 was crushed and the item inside is broken." and "17일 전에 반품했는데 환불이 안 됐어요." They make 28-54 such false positives; Kev-27B makes 9 and Jev 8. 53 of the 55 flipped questions have calm text and gold "not angry", so the gold labels are sound. The other 15 `angry` labels contradict their text (label noise every model misses), which puts the ceiling at 0.948.
 - **Kev-27B is a favourable draw.** Six LoRA checkpoints were trained from the base on Kev's data: B1 v2 s1 and s2, B1 trials A and B, and the two 2-epoch seeds. They score 0.740-0.796 (mean 0.765, sd 0.021) with 9-59 false positives, and Kev-27B is the top one. Against Kev-27B, **none of the other five passes the scienthoon guard or the pooled-externals guard**. B1 v2 seed 1, Kev-27B's own recipe, is at −2.7 [−4.2, −1.4] / −1.5 [−2.6, −0.5]. The full-weight arms score 0.757-0.778, at or above the family mean.
@@ -643,7 +651,7 @@ misses scienthoon by 0.01 pp, and the two worst draws (−7.7 / −3.7, −7.7 /
 would still fail scienthoon (lower bounds −4.5, −5.3, −6.0 pp; `drift.json` `lora_siblings_under_the_guards`, "Round 19
 result"). Reported with the rule, not gating: the `angry`
 question's false positives per candidate (calm-text tickets called angry, scienthoon-v1, counted with
-`scripts/scienthoon_drift.py`'s text-class rule; Kev-27B 9, Jev 8, round 19/20 arms 28-54), and the breadth index
+`scripts/scienthoon_drift.py`'s text-class rule (removed 2026-09-27); Kev-27B 9, Jev 8, round 19/20 arms 28-54), and the breadth index
 (`scripts/breadth_report.py`).
 
 `16k_plus` is `kev.metrics.calibration_by_length`'s tail of states of at least 16,384 tokens (Kev-27B tokenizer):
@@ -850,6 +858,30 @@ for 1140 steps (--accum 2); the plan's largest pass ... of --pass_tokens_max 409
 per step (projected; 45-47 s anchored to the probe); (3) as snapshots land, `launch-reads experiments/rounds/r22.json --arms
 <arm>` one candidate at a time (the budget table), reading the metered cost before each; (4) read-out, then confirmation as written. What may be committed: as round 21.
 
+## scienthoon removed (2026-09-27)
+
+Jared removed `evals/external/scienthoon-v1` (the validation tickets of scienthoon/jev-ood-calibration) from Kev on
+2026-09-27: its manifest, partitions, builder (`scripts/freeze_scienthoon.py`) and the round-20 analysis script
+(`scripts/scienthoon_drift.py`) are gone from main; they remain in git history, e.g. at `9c41005`. It is unsound as a gate:
+- It is 291 templated synthetic support tickets × 3 questions.
+- `queue` (Choice) is saturated: every 27B scores 0.948-0.952.
+- `priority` (Score) cannot be learned by construction: its own manifest says the label follows an org rule absent from the text.
+- `angry` (Noul) has 15 of 291 gold labels that contradict the text, and it turns on ~12 stock closing phrases whose
+  conventions are disputed. It is the question that round 20's analysis found behind the whole 27B cost
+  (`runs/r20-scienthoon/analysis.md`).
+
+What changes and what does not:
+- **Past verdicts stand as registered.** Rounds 5-22 registered scienthoon reads, guards and the pooled externals with it;
+  their outcomes, including every "failed scienthoon" in this file and the model cards, are not revisited. Round 22's reads,
+  scienthoon included, were made before the removal, so its read-out applies its rule as written.
+- **The record stays reproducible.** Committed rows under `runs/` stay (Jev's `runs/jev-scienthoon-v1`, the round reads,
+  `runs/r20-scienthoon/`). `kev.suite.REMOVED_SUITES` names the suite and the reason, and `kev.rounds validate` lists a
+  round ≤ 22's scienthoon read as archived instead of failing. Read-outs and verdicts are computed from rows, not the
+  suite, so `tests/test_rounds.py` reproduces them unchanged. Model-card numbers still trace to committed reports through
+  `scripts/verify_claims.py`. The README's external table dropped the row; its one README-only claim (0.911) went with it.
+- **From round 23:** no scienthoon read, panel or guard. The pooled external guard is **SemIf + WANLI-v2 + TypeSafe**, and
+  `validate` / `launch` refuse a round that still names the suite. The "Next" items on a scienthoon remedy are closed.
+
 ## Next
 
 Goals and open questions, not registered rounds; each becomes a spec and a PLAN section before it runs.
@@ -868,7 +900,8 @@ Goals and open questions, not registered rounds; each becomes a spec and a PLAN 
    - Data: `sft-v1` extended into a new version.
    - Snapshots: kept (0.25 / 0.5 / 0.75 of the steps, #145), read as a report.
    - Calibration: round 20's held-out-datasets pool method.
-   - The scienthoon remedy follows the round-20 analysis (`runs/r20-scienthoon/analysis.md`). Re-register the scienthoon
+   - *(Closed 2026-09-27: scienthoon was removed as an eval, see "scienthoon removed"; the two scienthoon items below are kept as written.)*
+     The scienthoon remedy follows the round-20 analysis (`runs/r20-scienthoon/analysis.md`). Re-register the scienthoon
      and pooled-externals guards against something other than Kev-27B's single best draw (Jared's call, at registration):
      either against the LoRA family, or scienthoon scored without the text-unknowable `priority`. Add a small open-weight
      tone minimal-pair family to the data (calm vs angry wording of the same problem, other domains, English and Korean,
@@ -944,6 +977,7 @@ outcomes.
 | Round 20 | 09-25/26 | post-hoc on round 19's finals, no training: held-out-datasets temperature + WiSE-FT interpolation (α 0.85 / 0.70 / 0.50) | no candidate (0 of 6): every arm fails scienthoon and the pooled externals; the registered temperature passes both ECE criteria down to α 0.70 (arm (a) breadth ECE 0.0085 vs 0.0118); toward the base scienthoon worsens for (a); the scienthoon analysis traces the cost to calm complaints read as "angry" on a guard whose reference is the best of six LoRA draws | `r20.json`; `runs/r20-readout`, `runs/r20-breadth-report`, `runs/r20-scienthoon`; "Round 20 result" |
 | Round 21 | 09-26 | full-weight SFT of Qwen3.8-27B on `sft-v2-r21` (32k states, extended data; lr 2e-6, 1e-6) | failed at startup: both arms out of GPU memory at step 62 (a 98.7k-token pass the characters plan costed like its slot's 33-50k-token passes), no snapshot, no read; ~$135 | `r21.json`; "Round 21 result" |
 | Round 22 | 09-26 | round 21's science and rule on `sft-v2-r22` (145,840 records) with `--pass_tokens_max 40960`, one arm (lr 2e-6), 4 candidates | registered | `r22.json`; "Round 22 (registered)" |
+| scienthoon removed | 09-27 | `evals/external/scienthoon-v1` removed as unsound for a gate (saturated `queue`, text-unknowable `priority`, 15 of 291 `angry` labels contradicting the text) | past verdicts stand; pooled externals = SemIf + WANLI-v2 + TypeSafe from round 23 | "scienthoon removed"; `kev.suite.REMOVED_SUITES` |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |
 
 Older milestones, all in `A:PLAN.md` (sections named in parentheses):

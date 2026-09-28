@@ -253,7 +253,8 @@ runs/r20-wise/*/*
 runs/locked/kev-27b-r20-ungated/transfer/*
 !runs/locked/kev-27b-r20-ungated/transfer/rows.json
 # round 20's record: report-only extras (served metrics, breadth report) and the scienthoon drift analysis, with the two
-# scienthoon reads it uses that were not in git (Jev's, converted by scripts/freeze_scienthoon.py; round 17 arm (a)'s)
+# scienthoon reads it uses that were not in git (Jev's, converted by scripts/freeze_scienthoon.py; round 17 arm (a)'s).
+# scienthoon-v1 and its scripts were removed on 2026-09-27 (kev.suite.REMOVED_SUITES); these rows stay as the record.
 !runs/r20-readout/served.json
 !runs/r20-breadth-report/
 !runs/r20-breadth-report/report.md

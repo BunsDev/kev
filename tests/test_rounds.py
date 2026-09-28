@@ -2,7 +2,8 @@
 reproduction of the committed read-outs and verdicts of rounds 5-20 from saved rows, and round 20's temperature pools,
 transfer reads and checkpoint arms on a synthetic round; the calibration guards (a temperature pool that shares data with
 an arm's training is refused, every arm's temperature source is recorded, scripts/calibrate_checkpoint.py refuses
-in-distribution rows) and calibration by state length.
+in-distribution rows) and calibration by state length; removed suites (kev.suite.REMOVED_SUITES: scienthoon-v1, archived
+for the rounds that read it, refused after round 22), whose recorded reads reproduce from the committed rows.
 
 Offline vs archive. Rounds 5-18 ran on the research branch; their trial rows, reads and most committed outputs live on the
 git tag `research-archive-2026-09-24`, not on main. This checkout carries everything the round-5 read-out and the round-15
@@ -38,7 +39,55 @@ def test_every_round_spec_is_well_formed(path):
     spec = rounds.load(path)
     problems, archived = rounds.validate(spec, ROOT, rows=False)   # structure, suites, plans against their manifests, budgets
     assert problems == []
-    assert all("not in this checkout" in a for a in archived)       # plans and suites a recorded round names, kept on the tag
+    assert all("not in this checkout" in a for a in archived)       # plans and suites a recorded round names, kept on the tag; removed suites
+
+
+def test_a_removed_suite_is_refused_with_its_reason():
+    """scienthoon-v1 was removed on 2026-09-27 (kev.suite.REMOVED_SUITES): reading it says why, in any path form."""
+    from kev.suite import REMOVED_SUITES, RemovedSuite, load_split, read_manifest, removed_suite
+    assert REMOVED_SUITES["evals/external/scienthoon-v1"]["last_round"] == 22
+    assert not (ROOT / "evals/external/scienthoon-v1").exists()
+    for path in ("evals/external/scienthoon-v1", ROOT / "evals/external/scienthoon-v1", "/root/kev/evals/external/scienthoon-v1/"):
+        with pytest.raises(RemovedSuite, match="removed on 2026-09-27: unsound as a gate.*priority"):
+            load_split(path, "development")
+        with pytest.raises(RemovedSuite, match="removed on 2026-09-27"):
+            read_manifest(path)
+    assert removed_suite("evals/external/semif-v1") is None and read_manifest(ROOT / "evals/external/semif-v1")["files"]
+
+
+@pytest.mark.parametrize("number", [5, 14, 19, 22])
+def test_rounds_up_to_22_list_scienthoon_as_archived(number):
+    """A round that read scienthoon before its removal validates: the read is archived (with or without `archive`), not a
+    problem, and is reported only when plans are checked, like every other suite."""
+    spec = rounds.load(ROOT / f"experiments/rounds/r{number}.json")
+    problems, archived = rounds.validate(spec, ROOT, rows=False)
+    assert problems == [] and any(a.startswith("read scienthoon: evals/external/scienthoon-v1 not in this checkout: removed on 2026-09-27") for a in archived)
+    assert not any("scienthoon" in a for a in rounds.validate(spec, ROOT, rows=False, plans=False).archived)
+
+
+def test_a_round_after_22_that_reads_scienthoon_is_refused():
+    """Round 23 on: naming the removed suite is a problem with the reason, so validate and launch refuse the round."""
+    spec = {**rounds.load(ROOT / "experiments/rounds/r22.json"), "round": 23}
+    refusal = ("read scienthoon: evals/external/scienthoon-v1 was removed on 2026-09-27 and may not be read after round 22: "
+               + rounds.removed_suite("evals/external/scienthoon-v1")["reason"])
+    for kwargs in ({"rows": False}, {"rows": False, "plans": False}):
+        problems, archived = rounds.validate(spec, ROOT, **kwargs)
+        assert [p for p in problems if "scienthoon" in p] == [refusal] and not any("scienthoon" in a for a in archived)
+    assert refusal in rounds.launchable(spec)
+    without = {**spec, "reads": {t: r for t, r in spec["reads"].items() if t != "scienthoon"}}
+    assert not any("scienthoon-v1" in p for p in rounds.validate(without, ROOT, rows=False, plans=False).problems)
+
+
+def test_no_read_of_a_removed_suite_is_launched(tmp_path, capsys):
+    """A recorded round's missing scienthoon rows are never made again: read_commands skips the job and says why (skips,
+    not raises, so a watcher's launch does not fail and retry forever), and every other missing read still launches."""
+    spec = rounds.load(ROOT / "experiments/rounds/r22.json")
+    arm = next(iter(spec["arms"]))
+    [bench] = rounds.read_commands(spec, arm, root=tmp_path)
+    jobs = bench[bench.index("--jobs") + 1].split(",")
+    tags = [t for t, _ in rounds.side_reads(spec, arm, spec["rule"], "candidate", rounds.arm_side(spec, arm, tmp_path))]
+    assert "scienthoon" in tags and len(jobs) == len(tags) - 1 and not any("scienthoon" in j for j in jobs)
+    assert "not launching read scienthoon" in capsys.readouterr().out
 
 
 def test_validation_names_what_is_wrong():
@@ -95,7 +144,8 @@ def test_read_commands_batch_one_arm_and_skip_existing_reads(tmp_path):
     [bench] = rounds.read_commands(spec, "27b-r10k-lr2e5", root=tmp_path)
     assert bench[:4] == ["modal", "run", "--detach", "modal_app.py::benchmarks"] and bench[-4:] == ["--gpu", "H200", "--timeout", "14400"]
     jobs = bench[bench.index("--jobs") + 1].split(",")
-    assert len(jobs) == 7 and not any(j.endswith("-hard") for j in jobs)                          # hard exists locally
+    assert len(jobs) == 6 and not any(j.endswith("-hard") for j in jobs)                          # hard exists locally
+    assert not any("scienthoon" in j for j in jobs)                                              # a removed suite is never read again
     assert "/runs/r17-27b/00-trial-0/checkpoint@evals/devtools-v1@r17-27b-r10k-lr2e5-devtools" in jobs
     [locked] = rounds.read_commands(spec, "27b-r10k-lr2e5", stage="locked", root=tmp_path)
     assert locked[:3] == ["modal", "run", "modal_app.py::locked_test"] and locked[locked.index("--name") + 1] == "kev-27b-r17-ungated"

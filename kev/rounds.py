@@ -64,6 +64,11 @@ development rows, plus `shipped`, the head.pt temperature when it is here), and 
 are a training corpus's (in distribution: round 19's failure mode). From round 21 (POOL_REQUIRED_FROM) a rule or
 confirmation with a temperature-dependent criterion must register a `temperature` pool: validate and launch refuse it
 otherwise; earlier rounds get a warning, so their recorded specs keep validating.
+
+Removed suites (kev.suite.REMOVED_SUITES: evals/external/scienthoon-v1, removed 2026-09-27, last read by round 22). A round
+up to the suite's `last_round` that reads one validates with the read listed under `archived`; its read-out and
+confirmations are computed from the committed rows as before (they need rows, not the suite). A later round that names
+one is refused with the reason, and no read of one is launched again (read_commands skips it; kev.suite.load_split refuses it).
 """
 import argparse
 import functools
@@ -78,7 +83,7 @@ from typing import NamedTuple
 
 from kev.metrics import (LENGTH_EDGES, LENGTH_METRICS, calibration_by_length, length_buckets, metrics, paired_bootstrap, raw_row, recorded,
                          scored_rows, served, served_at, tempered_row, unknowable_report)
-from kev.suite import ADMISSION_TOKENIZER, digest, file_lock, load_split, read_json, read_manifest, write_json
+from kev.suite import ADMISSION_TOKENIZER, digest, file_lock, load_split, read_json, read_manifest, removed_suite, suite_key, write_json
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLES = 2000   # the registered resample count since round 5
@@ -252,7 +257,9 @@ def validate(spec, root=ROOT, rows=True, plans=True, partitions=False):
     under root (what a read-out, and so a launch, needs); plans: every read suite exists, every plan trial passes
     kev.experiment.validated_trial against its suite manifest and fits its budget; partitions: plans go through load_plan
     instead (verifies the partitions, may fetch them from the Hub). A recorded round (`archive`: the git tag holding its
-    evidence) lists absent files under `archived` instead of failing; a round without it must have them all."""
+    evidence) lists absent files under `archived` instead of failing; a round without it must have them all. A read of a
+    removed suite (kev.suite.REMOVED_SUITES) is archived (with plans) for a round up to the suite's last_round, whether or
+    not the round carries `archive`, and a problem for any later round."""
     problems, archived, root = [], [], Path(root)
     absent = (archived if spec.get("archive") else problems).append
     for key in ("round", "registered", "parents", "arms", "reads", "rule"):
@@ -263,6 +270,13 @@ def validate(spec, root=ROOT, rows=True, plans=True, partitions=False):
         if r.get("entrypoint", "benchmarks") not in ENTRYPOINTS: problems.append(f"read {name}: entrypoint {r['entrypoint']!r} is not one of {ENTRYPOINTS}"); continue
         if r.get("entrypoint", "benchmarks") == "benchmarks" and not r.get("suite"): problems.append(f"read {name}: no suite")
         if r.get("entrypoint") == "locked_test" and not r.get("decision"): problems.append(f"read {name}: locked_test needs a decision suite")
+        if r.get("suite") and (gone := removed_suite(r["suite"])):   # kev.suite.REMOVED_SUITES: archived up to its last round, refused after
+            if isinstance(spec["round"], int) and spec["round"] <= gone["last_round"]:
+                if plans: archived.append(f"read {name}: {r['suite']} not in this checkout: removed on {gone['removed']} (kev.suite.REMOVED_SUITES); "
+                                          f"round {spec['round']} read it before the removal, and the rows it made are the record")
+            else:
+                problems.append(f"read {name}: {r['suite']} was removed on {gone['removed']} and may not be read after round {gone['last_round']}: {gone['reason']}")
+            continue
         if plans and r.get("suite") and not (root / r["suite"]).exists(): absent(f"read {name}: {r['suite']} not in this checkout")
     stages = {None: spec["rule"], **spec.get("confirm", {})}
     reads_transfer = any(TRANSFER in panel["reads"] for rule in stages.values() for panel in rule["panels"].values())
@@ -397,8 +411,7 @@ def read_split(read):
 
 def suite_dir(path):
     """'evals/...' for a suite path given relative, absolute or as a container saw it (/root/kev/evals/sft-v1); None if none."""
-    parts = Path(str(path)).parts
-    return str(Path(*parts[parts.index("evals"):])) if "evals" in parts else None
+    return suite_key(path)
 
 
 @functools.cache
@@ -869,7 +882,8 @@ def side_reads(spec, arm, rule, who, side, stage=None):
 
 def read_commands(spec, arm, stage=None, root=ROOT, sides=("candidate",)):
     """The `modal run` commands for the missing reads of one arm (and, with sides, its parent): one benchmarks call per side
-    with every suite batched, plus one locked_test call per locked read. Reads that exist locally are skipped."""
+    with every suite batched, plus one locked_test call per locked read. Reads that exist locally are skipped, and so are
+    reads of a removed suite (kev.suite.REMOVED_SUITES; the panels they feed stay missing)."""
     rule = spec["confirm"][stage] if stage else spec["rule"]
     size, commands = size_of(arm), []
     for who in sides:
@@ -886,6 +900,9 @@ def read_commands(spec, arm, stage=None, root=ROOT, sides=("candidate",)):
                                  *spec.get("locked_args", {}).get(size, [])])
                 continue
             if not d.startswith("runs/") or "/" in d.removeprefix("runs/"): raise ValueError(f"{tag}: benchmarks writes runs/<name>, not {d}")
+            if gone := removed_suite(r["suite"]):   # never made again; skipped, not raised, so a watcher does not retry it forever
+                print(f"!!! {arm}: not launching read {tag} ({d}): {r['suite']} was removed on {gone['removed']} (kev.suite.REMOVED_SUITES)", flush=True)
+                continue
             jobs.append(bench_job(run, r["suite"], d.removeprefix("runs/"), r.get("flags", "")))
         if jobs:
             timeout = spec.get("read_timeout", {}).get(size)
@@ -1116,7 +1133,9 @@ def watch(spec, interval=120, stagger=STAGGER, reads_timeout=6 * 3600):
     unmapped = watch_studies(list(spec.get("studies", {})), on_done, interval=interval, on_timeout=lambda study, label: continue_trial(spec, study, label))
     deadline = time.time() + reads_timeout
     finished = [a for a, x in spec["arms"].items() if x.get("trial") and (ROOT / x["trial"] / "result.json").exists()]
-    while (waiting := [a for a in finished if not all((ROOT / d / "rows.json").exists() for _, d in side_reads(spec, a, spec["rule"], "candidate", arm_side(spec, a)))]) and time.time() < deadline:
+    landed = lambda a: all((ROOT / d / "rows.json").exists() for tag, d in side_reads(spec, a, spec["rule"], "candidate", arm_side(spec, a))
+                           if not removed_suite(spec["reads"][tag].get("suite") or ""))   # a removed suite's read is never launched
+    while (waiting := [a for a in finished if not landed(a)]) and time.time() < deadline:
         if procs and all(p.poll() is not None for p in procs): break
         print(f"waiting for the reads of {waiting}", flush=True); time.sleep(interval)
     report = write_readout(spec)
@@ -1174,7 +1193,8 @@ def main(argv=None):
         print(f"!!! warning: {line}")
     if a.cmd == "validate":
         problems, archived = validate(spec, root, partitions=a.partitions)
-        if archived: print(f"archived (on {spec['archive']}, not in this checkout):\n  " + "\n  ".join(archived))
+        where = f"on {spec['archive']}, not in this checkout" if spec.get("archive") else "not in this checkout"
+        if archived: print(f"archived ({where}):\n  " + "\n  ".join(archived))
         print("\n".join(problems) or f"round {spec['round']}: ok ({len(spec['arms'])} arms, {len(spec.get('studies', {}))} studies)")
         raise SystemExit(1 if problems else 0)
     if a.cmd == "readout":
