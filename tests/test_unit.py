@@ -557,6 +557,99 @@ def test_interpolation_refuses_a_checkpoint_that_does_not_match_its_base(tiny_ba
         interpolate(tmp_path / "sft", [0.5], [tmp_path / "other/checkpoint"], base="Qwen/Qwen3.8-27B", log=lambda m: None)
 
 
+def test_interpolation_toward_a_lora_checkpoint_merged_in_fp32(tiny_base, tmp_path, monkeypatch):
+    """--toward a LoRA checkpoint (round 23: round 22's SFT toward Kev-27B): alpha 1 is the SFT exactly; alpha 0 with
+    --blend_head is the LoRA model exactly (backbone = the fp32 merge_and_unload rounded once to bf16, head = the LoRA's);
+    0.5 the fp32 midpoint of the SFT and the unrounded fp32 merge, heads averaged in fp32; without --blend_head the backbone is
+    the same and the head the SFT's; head.pt records both endpoints and both heads."""
+    from peft import PeftModel
+    from safetensors.torch import load_file
+    from kev.checkpoint import Checkpoint, LoadOptions, read_meta
+    from kev.data import load_records, materialize
+    from kev.model import DecisionModel, load_tokenizer
+    from kev.suite import digest
+    from scripts.interpolate_checkpoint import interpolate
+    train_tiny(tiny_base, tmp_path / "sft", *FULL, "--max_steps", "3", monkeypatch=monkeypatch)
+    train_tiny(tiny_base, tmp_path / "lora", "--lora", "4", "--weights_dtype", "bf16", "--head_lr", "1e-2", "--max_steps", "3", monkeypatch=monkeypatch)
+    sft_meta, lora_meta = read_meta(tmp_path / "sft"), read_meta(tmp_path / "lora")
+    assert lora_meta.weights == "lora" and any(not torch.equal(sft_meta.head[k], lora_meta.head[k]) for k in sft_meta.head)
+    alphas = [1.0, 0.0, 0.5]
+    outs = [tmp_path / f"kh-{i}" / "checkpoint" for i in range(3)]
+    reports = interpolate(tmp_path / "sft", alphas, outs, toward=tmp_path / "lora", blend_head=True, log=lambda m: None)
+    [plain] = interpolate(tmp_path / "sft", [0.5], [tmp_path / "k-50/checkpoint"], toward=tmp_path / "lora", log=lambda m: None)
+
+    tok = load_tokenizer(lora_meta.base)
+    ref = DecisionModel(lora_meta.base, tok, "cpu", head_dim=lora_meta.head_dim, dtype=torch.float32)
+    merged = PeftModel.from_pretrained(ref.lm, str(tmp_path / "lora"), torch_device="cpu").merge_and_unload().state_dict()   # fp32 W + delta
+    sft = load_file(tmp_path / "sft/model.safetensors")
+    one, zero, half = (load_file(o / "model.safetensors") for o in outs)
+    assert merged.keys() == sft.keys() == zero.keys()
+    assert all(torch.equal(one[k], sft[k]) for k in sft)
+    assert all(torch.equal(zero[k], merged[k].to(torch.bfloat16)) and zero[k].dtype == torch.bfloat16 for k in sft)
+    assert all(torch.equal(half[k], (0.5 * sft[k].float() + 0.5 * merged[k]).to(torch.bfloat16)) for k in sft)
+    base = load_file(tiny_base / "base/model.safetensors")
+    assert any(not torch.equal(merged[k], base["model." + k].float()) for k in sft), "the adapter moved no weight"
+    assert any(not torch.equal(half[k], one[k]) and not torch.equal(half[k], zero[k]) for k in sft)
+    heads = [read_meta(o) for o in outs]
+    assert all(torch.equal(heads[0].head[k], sft_meta.head[k]) and torch.equal(heads[1].head[k], lora_meta.head[k]) for k in sft_meta.head)
+    assert all(torch.equal(heads[2].head[k], 0.5 * sft_meta.head[k] + 0.5 * lora_meta.head[k]) for k in sft_meta.head)
+    k50 = read_meta(tmp_path / "k-50/checkpoint")
+    assert all(torch.equal(k50.head[k], sft_meta.head[k]) for k in sft_meta.head) and k50.temperature == sft_meta.temperature
+    assert load_file(tmp_path / "k-50/checkpoint/model.safetensors").keys() == half.keys()
+    assert all(torch.equal(load_file(tmp_path / "k-50/checkpoint/model.safetensors")[k], half[k]) for k in half)
+
+    info = heads[2].extra["interpolation"]
+    assert info["alpha"] == 0.5 and info["base"] == f"{sft_meta.base}@{sft_meta.base_revision}"
+    assert info["toward"]["kind"] == "lora" and info["toward"]["weights_sha256"] == Checkpoint(tmp_path / "lora").weights_sha256()
+    assert info["toward"]["adapted_tensors"] > 0 and info["toward"]["head_sha256"] == digest(tmp_path / "lora/head.pt")
+    assert info["head"] == {"kind": "blend", "sft": {"head_sha256": digest(tmp_path / "sft/head.pt"), "temperature": sft_meta.temperature},
+                            "toward": {"head_sha256": digest(tmp_path / "lora/head.pt"), "temperature": lora_meta.temperature}}
+    assert k50.extra["interpolation"]["head"]["kind"] == "sft" and reports[2]["head"]["kind"] == "blend" and plain["head"]["kind"] == "sft"
+
+    # alpha 0 with --blend_head scores like the LoRA checkpoint served merged (bf16 fold of the adapter, its head)
+    rec = materialize(load_records(tiny_base / "data.jsonl")[0])
+    _, lora_model = Checkpoint(tmp_path / "lora").load("cpu", LoadOptions(fused=True))
+    ck0 = Checkpoint(outs[1]); _, full0 = ck0.load("cpu")
+    assert ck0.full and all(torch.equal(full0.lm.state_dict()[k], v) for k, v in lora_model.lm.state_dict().items())
+    with torch.no_grad():
+        pa, pb = full0.probs(full0.encode(tok, rec)), lora_model.probs(lora_model.encode(tok, rec))   # equal weights; CPU kernels
+        assert max(float((a - b).abs().max()) for a, b in zip(pa, pb)) < 1e-5                        # differ at ~1e-6 by layout
+
+
+def test_interpolation_toward_a_full_checkpoint_and_its_refusals(tiny_base, tmp_path, monkeypatch):
+    """--toward a full-weight checkpoint: alpha 0 is its backbone (and, blended, its head) exactly. Refused before anything is
+    written: another base or revision, --blend_head without --toward, heads of another shape, a tensor the SFT does not have."""
+    import shutil
+    from safetensors.torch import load_file, save_file
+    from kev.checkpoint import read_meta, write_meta
+    from scripts.interpolate_checkpoint import interpolate
+    train_tiny(tiny_base, tmp_path / "sft", *FULL, "--max_steps", "3", monkeypatch=monkeypatch)
+    train_tiny(tiny_base, tmp_path / "other", *FULL, "--max_steps", "2", "--seed", "1", monkeypatch=monkeypatch)
+    [report] = interpolate(tmp_path / "sft", [0.0], [tmp_path / "w00/checkpoint"], toward=tmp_path / "other", blend_head=True, log=lambda m: None)
+    got, want = load_file(tmp_path / "w00/checkpoint/model.safetensors"), load_file(tmp_path / "other/model.safetensors")
+    assert got.keys() == want.keys() and all(torch.equal(got[k], want[k]) for k in want) and report["toward"]["kind"] == "full"
+    head, other = read_meta(tmp_path / "w00/checkpoint").head, read_meta(tmp_path / "other").head
+    assert all(torch.equal(head[k], other[k]) for k in other)
+    quiet = lambda m: None   # noqa: E731
+
+    shutil.copytree(tmp_path / "other", tmp_path / "rev")
+    meta = read_meta(tmp_path / "rev"); meta.base_revision = "0" * 40; write_meta(tmp_path / "rev", meta)
+    with pytest.raises(ValueError, match="both must share one base and revision"):
+        interpolate(tmp_path / "sft", [0.5], [tmp_path / "x1/checkpoint"], toward=tmp_path / "rev", log=quiet)
+    with pytest.raises(ValueError, match="needs|base has no head"):
+        interpolate(tmp_path / "sft", [0.5], [tmp_path / "x2/checkpoint"], blend_head=True, log=quiet)
+    shutil.copytree(tmp_path / "other", tmp_path / "head")
+    meta = read_meta(tmp_path / "head"); meta.head = {**meta.head, "q.weight": meta.head["q.weight"][:-1].clone()}; write_meta(tmp_path / "head", meta)
+    with pytest.raises(ValueError, match="--blend_head: head.q.weight"):
+        interpolate(tmp_path / "sft", [0.5], [tmp_path / "x3/checkpoint"], toward=tmp_path / "head", blend_head=True, log=quiet)
+    shutil.copytree(tmp_path / "other", tmp_path / "renamed")
+    first = next(iter(want))
+    save_file({**{k: v for k, v in want.items() if k != first}, "bogus.weight": want[first]}, tmp_path / "renamed/model.safetensors", metadata={"format": "pt"})
+    with pytest.raises(ValueError, match="does not match --toward"):
+        interpolate(tmp_path / "sft", [0.5], [tmp_path / "x4/checkpoint"], toward=tmp_path / "renamed", log=quiet)
+    assert not any((tmp_path / f"x{i}").exists() for i in range(1, 5))
+
+
 def test_master_adamw_is_adamw_on_fp32_masters():
     """MasterAdamW with host masters = torch AdamW after clip_grad_norm_, step for step; bf16 weights hold bf16(master)."""
     from kev.full_ft import MasterAdamW

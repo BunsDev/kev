@@ -1,5 +1,6 @@
 """The round harness (kev.rounds): spec validation, the benchmark job codec, the watcher's resume and network handling, and
-reproduction of the committed read-outs and verdicts of rounds 5-20 from saved rows, and round 20's temperature pools,
+reproduction of the committed read-outs and verdicts of rounds 5-20, 22 and 24 from saved rows (round 23's re-registration
+uses round 24's rule verbatim), and round 20's temperature pools,
 transfer reads and checkpoint arms on a synthetic round; the calibration guards (a temperature pool that shares data with
 an arm's training is refused, every arm's temperature source is recorded, scripts/calibrate_checkpoint.py refuses
 in-distribution rows) and calibration by state length; removed suites (kev.suite.REMOVED_SUITES: scienthoon-v1, archived
@@ -609,6 +610,23 @@ def test_readout_reproduces_round_20():
     assert report["ranking"] == committed["ranking"] and report["candidates"] == committed["candidates"] == {"27b": None}
 
 
+def test_readout_reproduces_round_22():
+    """Round 22 was read out by this harness (no candidate). Its public-suite reads are committed; every tasksource-heldout-v1
+    read (rows and report name the private families) and the ood-v2 / agents-ood-v1 / guardrails-ood-v1 rows, round 21's
+    parent reads included, come from the private dataset (scripts/private_rows.py), and longdoc-v1's state lengths from the
+    private evaluation mirror: the test skips for an account without access. Every arm is served at its pool temperature."""
+    from scripts.private_rows import restore
+    try:
+        restore("runs/r22-readout/private-rows.json", ROOT)
+    except PermissionError as error:
+        pytest.skip(str(error))
+    spec = rounds.load(ROOT / "experiments/rounds/r22.json")
+    report = rounds.readout(spec, ROOT)
+    assert same(report, read_json(ROOT / "runs/r22-readout/round22.json"))
+    assert all(r["temperature_source"]["kind"] == "pool" and r["temperature_source"]["questions"] == 648 for r in report["arms"].values())
+    assert report["candidates"] == {"27b": None} and "!!!" not in rounds.table(report)
+
+
 def test_readout_reproduces_round_24():
     """Round 24 (a retrospective selection over existing reads) reads a private exclusion list and private rows (every
     tasksource-heldout-v1 read and the ood / agents-ood / guardrails-ood rows), restored from the private dataset their
@@ -622,6 +640,27 @@ def test_readout_reproduces_round_24():
     report = rounds.readout(rounds.load(ROOT / "experiments/rounds/r24.json"), ROOT)
     assert same(report, read_json(ROOT / "runs/r24-readout/round24.json"))
     assert report["candidates"] == {"27b": "27b-r22-final"} and report["ranking"] == {"27b": ["27b-r22-final", "27b-r20a-w85"]}
+
+
+def test_round_23_uses_round_24_rule():
+    """Round 23 was re-registered (2026-09-28) on round 24's audited rule verbatim: the same reads, temperature pool (with its
+    interval), parents and rule; the same confirmation panels and criteria, its own candidate and locked read directories,
+    and Kev-27B's tests-stage side reused from round 24's confirmation (the same checkpoint, suites and served T). No
+    removed suite is read, and the spec validates offline."""
+    r23, r24 = (rounds.load(ROOT / f"experiments/rounds/r{n}.json") for n in (23, 24))
+    for key in ("reads", "temperature", "parents", "rule", "drop_ids", "transfer_read", "read_timeout", "locked_args", "gpu"):
+        assert r23[key] == r24[key], key
+    assert set(r23["confirm"]) == set(r24["confirm"]) == {"tests", "locked"}
+    for stage in ("tests", "locked"):
+        assert r23["confirm"][stage]["panels"] == r24["confirm"][stage]["panels"]
+        assert r23["confirm"][stage]["criteria"] == r24["confirm"][stage]["criteria"]
+    assert r23["confirm"]["tests"]["candidate_reads"] == "runs/r23c-{size}-cand-{tag}"
+    assert r23["confirm"]["tests"]["parent_reads"] == r24["confirm"]["tests"]["parent_reads"] == "runs/r24c-{size}-parent-{tag}"
+    assert r23["confirm"]["locked"]["candidate_reads"] == {"locked": "runs/locked/kev-{size}-r23-ungated/transfer"}
+    assert sorted(r23["arms"]) == sorted(f"27b-{h}-w{a}" for h in ("k", "kh") for a in (85, 70, 50))
+    assert not any("scienthoon" in r.get("suite", "") for r in r23["reads"].values())
+    problems, _ = rounds.validate(r23, ROOT, rows=False)
+    assert not [p for p in problems if "exclude_file" not in p], problems
 
 
 # --- temperature pools, transfer reads and checkpoints without a trial (round 20) -------------------------------------

@@ -49,11 +49,12 @@ A round is a PLAN.md section plus a spec, committed together before any training
    rule (primary, guards with thresholds sized to each suite, rank), the confirmation stages, and the budget. Use the
    standing rules; do not invent a new statistic for one round.
 2. Write `experiments/rounds/r<N>.json` by copying the closest past spec (r15 for a joint delta, r17 for a 27B, r10 for a
-   skills round, r20 for post-hoc arms without training: a temperature pool, interpolated checkpoints). Leave out `"archive"`: that key marks the recorded rounds 5-18. Every plan file the spec names, and every
+   skills round, r20 for post-hoc arms without training: a temperature pool, interpolated checkpoints; r23 for blends toward another
+   checkpoint, whose arms name `trained_on` for both endpoints' training). Leave out `"archive"`: that key marks the recorded rounds 5-18. Every plan file the spec names, and every
    parent read its rule needs, must exist in this checkout; if a parent lacks a read, `launch-reads <spec> --parents` makes it.
    Drop every read of a removed suite (`kev.suite.REMOVED_SUITES`, with the reason): `evals/external/scienthoon-v1` was
-   removed on 2026-09-27, so from round 23 the scienthoon read, panel and guard go, and the pooled external panel is SemIf +
-   WANLI-v2 + TypeSafe. `validate` and `launch` refuse a round after the suite's last round that still names it.
+   removed on 2026-09-27, so from round 23 the scienthoon read, panel and guard go. The pooled externals are not a gate either: round 24's
+   audited rule, which round 23 follows, reports SemIf, WANLI-v2 and TypeSafe as optional panels. `validate` and `launch` refuse a round after the suite's last round that still names it.
 3. New data is a new directory under `evals/` with a `manifest.json` (sha256 per file, inputs' hashes). Under the SFT data
    policy (PLAN.md) private corpora keep only the manifest in git, with a `"mirror"` entry pointing at the private dataset.
 4. **MUST: every served or shipped temperature comes from a pool of held-out datasets, never from a partition of the training

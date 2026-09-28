@@ -417,7 +417,7 @@ def sft_probe(name: str, gpu: str = "H200", base: str = KEV_27B_BASE[0], revisio
 
 @app.function(image=image, cpu=INTERPOLATE_CPU, memory=INTERPOLATE_MEMORY, retries=0, timeout=INTERPOLATE_TIMEOUT,
               volumes={RUNS_MOUNT: runs_volume, HF_MOUNT: hf_cache}, secrets=secrets)
-def run_interpolate(sft, alphas, names, base, revision, study):
+def run_interpolate(sft, alphas, names, base, revision, study, toward=None, blend_head=False):
     """scripts/interpolate_checkpoint.py on a CPU container: one checkpoint per alpha at /runs/<study>/<name>/checkpoint,
     the runs volume committed after each."""
     sys.path.insert(0, "/root")
@@ -425,28 +425,35 @@ def run_interpolate(sft, alphas, names, base, revision, study):
     runs_volume.reload()
     try:
         return write_interpolations(sft, alphas, [Path(RUNS_MOUNT) / study / n / "checkpoint" for n in names], base, revision,
-                                    on_done=lambda report: runs_volume.commit(), log=lambda m: print(m, flush=True))
+                                    on_done=lambda report: runs_volume.commit(), log=lambda m: print(m, flush=True),
+                                    toward=toward or None, blend_head=blend_head)
     finally:
         runs_volume.commit(); hf_cache.commit()
 
 
 @app.local_entrypoint()
 def interpolate(sft: str, prefix: str, alphas: str = "0.85,0.70,0.50", base: str = KEV_27B_BASE[0], revision: str = KEV_27B_BASE[1],
-                study: str = "r20-wise", timeout: int = INTERPOLATE_TIMEOUT):
-    """WiSE-FT checkpoints of a full-weight SFT checkpoint on the runs volume (--sft /runs/<trial>/checkpoint) with its base:
+                study: str = "r20-wise", timeout: int = INTERPOLATE_TIMEOUT, toward: str = "", blend_head: bool = False):
+    """WiSE-FT checkpoints of a full-weight SFT checkpoint on the runs volume (--sft /runs/<trial>/checkpoint) with its base,
+    or with --toward another checkpoint of the same base and revision (a /runs/... checkpoint or a Hub id@rev; full weights,
+    or a LoRA adapter merged in fp32; --blend-head blends the pointer heads too, else the SFT head is kept):
     /runs/<study>/<prefix>-w<alpha x 100>/checkpoint for each alpha (weight on the SFT backbone). Refuses unless the SFT
     run's base is --base @ --revision (Kev-27B's by default). Reports land in runs/<study>/<name>/interpolation.json."""
     sys.path.insert(0, str(ROOT))
+    from kev.checkpoint import is_hub_id
     from scripts.interpolate_checkpoint import weight_label
     if not sft.startswith(f"{RUNS_MOUNT}/"): raise SystemExit(f"--sft is a checkpoint on the runs volume ({RUNS_MOUNT}/...), not {sft}")
+    if toward and not (toward.startswith(f"{RUNS_MOUNT}/") or (is_hub_id(toward) and "@" in toward)):
+        raise SystemExit(f"--toward is a checkpoint on the runs volume ({RUNS_MOUNT}/...) or a pinned Hub id (repo@revision), not {toward}")
+    if blend_head and not toward: raise SystemExit("--blend-head needs --toward (the base has no pointer head)")
     values = [float(a) for a in alphas.split(",")]
     names = [f"{prefix}-w{weight_label(a)}" for a in values]
     written = volume_names(f"/{study}")[0] if study in volume_names("/")[0] else set()
     taken = [n for n in names if n in written and "checkpoint" in volume_names(f"/{study}/{n}")[0]]
     if taken: raise SystemExit(f"/{study}/{taken} hold checkpoints already; interpolations are written once")
     print(f"admission bound ${interpolation_bound(timeout):.2f} ({INTERPOLATE_CPU} CPU, {INTERPOLATE_MEMORY[1] // 1024} GiB, {timeout} s, no GPU)", flush=True)
-    call = run_interpolate.with_options(timeout=timeout).spawn(sft, values, names, base, revision, study)
-    print(f"spawned interpolation of {sft} -> /{study}/{names}: call {call.object_id}", flush=True)
+    call = run_interpolate.with_options(timeout=timeout).spawn(sft, values, names, base, revision, study, toward or None, blend_head)
+    print(f"spawned interpolation of {sft}{f' toward {toward}' if toward else ''}{' (heads blended)' if blend_head else ''} -> /{study}/{names}: call {call.object_id}", flush=True)
     for report in call.get():
         name = Path(report["checkpoint"]).parent.name
         (ROOT / "runs" / study / name).mkdir(parents=True, exist_ok=True)

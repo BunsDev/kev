@@ -286,6 +286,23 @@ evals/sft-v2-r22/*.jsonl
 evals/ood-v2/*.jsonl
 evals/agents-ood-v1/*.jsonl
 evals/guardrails-ood-v1/*.jsonl
+# round 22 (experiments/rounds/r22.json): the read-out, its private-rows manifest and the monitor logs; every public-suite
+# read's report + rows; the ood-v2 / agents-ood-v1 / guardrails-ood-v1 reads' reports (aggregates only); the final trial's
+# provenance, redacted result (result-public.json), in-trial transfer rows, in-trial calibration temperature and snapshot
+# records; the breadth report; the scienthoon drift. Private (jaredpalmer/kev-private-train, runs/r22-readout/private-rows.json,
+# scripts/private_rows.py restore): every tasksource-heldout-v1 read (its rows and report name the private families), the
+# ood / agents-ood / guardrails-ood rows (held-out records of sft-v2's private components), the trial's development rows
+# and its full result.json (its per-task table names tasksource-v1's families). Round 21's four parent reads, which rounds
+# 22 and 23 reuse, the same way: reports of ood / agents-ood / guardrails-ood here, rows and the tsheld read private.
+!runs/r22-readout/
+!runs/r22-readout/round22.json
+!runs/r22-readout/private-rows.json
+!runs/r22-readout/monitor.log
+!runs/r22-readout/final.log
+!runs/r22-breadth-report/
+!runs/r22-breadth-report/report.md
+!runs/r22-scienthoon/
+!runs/r22-scienthoon/drift.json
 # round 24 (experiments/rounds/r24.json, a retrospective selection over existing reads). Private (never in git): the
 # tasksource-heldout exclusion list (runs/r24-private/; jaredpalmer/kev-private-train runs/r24/, manifest
 # runs/r24-readout/private-exclude.json), every tasksource-heldout-v1 read (its rows and report name the private families)
@@ -319,6 +336,11 @@ runs/r21-P27-tsheld/
 !runs/r22-27b-lr2e6/00-trial-0/
 runs/r22-27b-lr2e6/00-trial-0/*
 !runs/r22-27b-lr2e6/00-trial-0/provenance.json
+!runs/r22-27b-lr2e6/00-trial-0/result-public.json
 !runs/r22-27b-lr2e6/00-trial-0/transfer/
 runs/r22-27b-lr2e6/00-trial-0/transfer/*
 !runs/r22-27b-lr2e6/00-trial-0/transfer/rows.json
+!runs/r22-27b-lr2e6/00-trial-0/calibration/
+runs/r22-27b-lr2e6/00-trial-0/calibration/*
+!runs/r22-27b-lr2e6/00-trial-0/calibration/temperature.json
+!runs/r22-27b-lr2e6/00-trial-0/snapshots/

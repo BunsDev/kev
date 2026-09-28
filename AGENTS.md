@@ -149,7 +149,9 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   restored with `scripts/private_rows.py`, so the public spec carries only the path and a salted file's sha256); `"optional": true`
   marks a report-only panel that no criterion or rank may read and whose absent reads never leave an arm incomplete; the
   `temperature` pool's `ci: {level, samples, seed}` adds each arm's bootstrap interval of its pooled T (`temperature_ci`). An arm may be a checkpoint without a trial (`"checkpoint": "/runs/..."`, its "transfer" rows
-  from a `transfer_read`), e.g. a WiSE-FT interpolation (`scripts/interpolate_checkpoint.py`, `modal_app.py::interpolate`);
+  from a `transfer_read`), e.g. a WiSE-FT interpolation (`scripts/interpolate_checkpoint.py`, `modal_app.py::interpolate`: with the
+  base, or `--toward` another checkpoint of the same base and revision, full weights or a LoRA merged in fp32, `--blend_head` to blend the
+  pointer heads too; round 23);
   deltas are `kev.rounds.paired` (2,000 resamples, seed 0, micro). Rounds 5-18 are recorded specs (`"archive": "research-archive-2026-09-24"`): their plans, reads, data builders
   and per-round scripts live on that git tag, not on main; `validate` lists what this checkout lacks instead of failing, and
   `launch`/`watch`/`launch-reads` refuse a recorded round (a new round is a new spec, without `archive`, and must have its plans
@@ -157,7 +159,8 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   archived for rounds up to its `last_round` (with or without `archive`; their read-outs come from the committed rows), refused for any
   later round, and never launched again (`read_commands`, `load_split`). `tests/test_rounds.py` reproduces the committed read-outs of rounds 5-18 and verdicts of 8/10/11/12/15
   exactly; offline (CI) it runs round 5's read-out, round 15's locked verdict and round 20's six interpolated arms, whose rows are on main; round 19's read-out
-  (and round 20's whole read-out) runs where the private dataset is readable (its trials' `sft-v1` development rows: `scripts/private_rows.py`); every other case
+  (and round 20's whole read-out, and rounds 22's and 24's) runs where the private dataset is readable (round 19's trials' `sft-v1` development rows;
+  rounds 22's and 24's tasksource-heldout reads, round 24's exclusion list, and ood / agents / guardrails rows: `scripts/private_rows.py`); every other case
   skips unless `KEV_ROUNDS_ROOT` points at a checkout with the archived rows and outputs (the research checkout, or a worktree
   of the tag plus its gitignored trial rows). `kev.autoresearch
   session <specs> --spend-start X --spend-cap Y` runs registered rounds to their read-outs under a spend cap and never confirms;
@@ -170,7 +173,7 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   unknowable) for OOD, `evals/round3/{decision-r3,transfer-r3}` (calibration audit; the 1,260-record final panel was
   read by the 2026-09-22 release confirmation and has been a short-state guard since round 11), `evals/smoke-v1` for tests, plus `evals/external/` (semif-v1, ekzhang-mmlupro-v1, and SemIf's pinned third-party selections wanli-v1 + typesafe-v1 via
   `scripts/freeze_semif_external.py`; `scripts/compare_typesafe.py` reports equal-case agreement/TVD against the reference and published answers, `--tokenizer` adds accuracy by state length; Kev-9B/4B scored 2026-09-22: WANLI 0.703/0.695 vs Jev 0.758, TypeSafe 0.809/0.856 agreement on 89 answered rows vs 0.891, `runs/kev-*-{wanli,typesafe}-v1`; `external/scienthoon-v1` was removed on 2026-09-27, unsound as a gate: `kev.suite.REMOVED_SUITES` refuses a read with the reason, and from round 23
-  the pooled external guard is SemIf + WANLI-v2 + TypeSafe (PLAN.md, standing rules)),
+  no pooled-externals guard either: round 24's audited rule, which round 23 follows, reports SemIf, WANLI-v2 and TypeSafe without gating them (PLAN.md, standing rules)),
   `evals/night2/` (delta training data, `scripts/build_night2_data.py`), `evals/diagnostics/` (binding-v1), `evals/hard-v1`
   (programmatically labelled skill records in seven families: long policy documents, trade-offs, probability, multi-hop,
   temporal/numeric, judging a proposed answer, missing-fact abstention; `scripts/build_hard_v1.py` + `hard_v1_{common,policy,families,numeric}.py`,
