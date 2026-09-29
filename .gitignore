@@ -284,6 +284,8 @@ evals/sft-v2-r21/*.jsonl
 evals/sft-v2-r22/*.jsonl
 # sft-v2-r25 (round 25's training suite, derived from sft-v2-r22 by kev-sft assemble/derive_r25.py): partitions only in jaredpalmer/kev-private-train
 evals/sft-v2-r25/*.jsonl
+# sft-v2-r26 (round 26's training suite: sft-v2-r25 + 13,000 tasksource-v1 records, from sft-v2-r21 by kev-sft assemble/derive_r26.py): partitions only in jaredpalmer/kev-private-train
+evals/sft-v2-r26/*.jsonl
 # eval-only suites set aside by sft-v2's components; partitions live only in jaredpalmer/kev-private-evals
 evals/ood-v2/*.jsonl
 evals/agents-ood-v1/*.jsonl
