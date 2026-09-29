@@ -411,3 +411,50 @@ runs/locked/kev-27b-r23-ungated/*
 runs/locked/kev-27b-r23-ungated/transfer/*
 !runs/locked/kev-27b-r23-ungated/transfer/rows.json
 runs/r23c-*-tshtest/
+# round 25 (experiments/rounds/r25.json): the read-out (round25.json, readout.txt, tables.md), its report-only extras
+# (vs-w85*, breadth-ece-by-t.json, transfer4-vs-parent.json and the scripts that wrote them) and private-rows manifest;
+# the read launch records; every public-suite read's report + rows; the ood-v2 / agents-ood-v1 / guardrails-ood-v1 reads'
+# reports (aggregates only); each trial's provenance.json, result-public.json (result.json without the per-task table),
+# in-trial transfer rows, in-trial calibration temperature, training metrics and the snapshot.json records. Private
+# (jaredpalmer/kev-private-train runs/r25/, runs/r25-readout/private-rows.json, scripts/private_rows.py restore): every
+# tasksource-heldout-v1 read (rows and report), the ood / agents-ood / guardrails-ood rows, both trials' development rows
+# and full result.json. Checkpoints (~51 GB each) stay on the kev-runs volume.
+!runs/r25-readout/
+runs/r25-readout/*
+!runs/r25-readout/round25.json
+!runs/r25-readout/readout.txt
+!runs/r25-readout/tables.md
+!runs/r25-readout/vs-w85.md
+!runs/r25-readout/vs-w85-*.json
+!runs/r25-readout/breadth-ece-by-t.json
+!runs/r25-readout/transfer4-vs-parent.json
+!runs/r25-readout/private-rows.json
+!runs/r25-readout/r25-*.py
+!runs/r25-reads-*.json
+!runs/r25-27b-*/
+runs/r25-27b-*/*
+!runs/r25-27b-*/report.json
+!runs/r25-27b-*/rows.json
+runs/r25-27b-*-tsheld/
+runs/r25-27b-*-ood/rows.json
+runs/r25-27b-*-agentsood/rows.json
+runs/r25-27b-*-guardood/rows.json
+!runs/r25-27b-lr1e6/00-trial-0/
+!runs/r25-27b-lr2e6/00-trial-0/
+runs/r25-27b-lr*e6/00-trial-0/*
+!runs/r25-27b-lr*e6/00-trial-0/provenance.json
+!runs/r25-27b-lr*e6/00-trial-0/result-public.json
+!runs/r25-27b-lr*e6/00-trial-0/transfer/
+runs/r25-27b-lr*e6/00-trial-0/transfer/*
+!runs/r25-27b-lr*e6/00-trial-0/transfer/rows.json
+!runs/r25-27b-lr*e6/00-trial-0/calibration/
+runs/r25-27b-lr*e6/00-trial-0/calibration/*
+!runs/r25-27b-lr*e6/00-trial-0/calibration/temperature.json
+!runs/r25-27b-lr*e6/00-trial-0/checkpoint/
+runs/r25-27b-lr*e6/00-trial-0/checkpoint/*
+!runs/r25-27b-lr*e6/00-trial-0/checkpoint/training_metrics.json
+!runs/r25-27b-lr*e6/00-trial-0/snapshots/
+!runs/r25-27b-lr*e6/00-trial-0/snapshots/*/
+!runs/r25-27b-lr*e6/00-trial-0/snapshots/*/checkpoint/
+runs/r25-27b-lr*e6/00-trial-0/snapshots/*/checkpoint/*
+!runs/r25-27b-lr*e6/00-trial-0/snapshots/*/checkpoint/snapshot.json
