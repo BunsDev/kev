@@ -650,6 +650,66 @@ def test_interpolation_toward_a_full_checkpoint_and_its_refusals(tiny_base, tmp_
     assert not any((tmp_path / f"x{i}").exists() for i in range(1, 5))
 
 
+def test_merged_lora_checkpoint_initializes_full_weight_training(tiny_base, tmp_path, monkeypatch):
+    """scripts/merge_lora_checkpoint.py (round 25 starts full-weight SFT from Kev-27B): the backbone is exactly what
+    interpolate_checkpoint writes at alpha 0 toward the LoRA checkpoint (fp32 W + delta rounded once to bf16), with the same
+    names and shapes as a full-weight run's save; head.pt is the LoRA's meta and head with lora 0 and weights "full"; it
+    loads as a full-weight checkpoint scoring like the LoRA served merged, and kev.train --full_ft 1 --init_from warm-starts
+    backbone and head from it."""
+    import json
+    from safetensors.torch import load_file
+    from kev.checkpoint import Checkpoint, LoadOptions, read_meta
+    from kev.data import load_records, materialize
+    from kev.model import load_tokenizer
+    from kev.suite import digest, read_json
+    from scripts.interpolate_checkpoint import interpolate
+    from scripts.merge_lora_checkpoint import merge, weights_sha256
+    train_tiny(tiny_base, tmp_path / "sft", *FULL, "--max_steps", "2", monkeypatch=monkeypatch)
+    train_tiny(tiny_base, tmp_path / "lora", "--lora", "4", "--weights_dtype", "bf16", "--lr", "5e-2", "--head_lr", "1e-2", "--max_steps", "3", monkeypatch=monkeypatch)   # lr: a delta bf16 can hold
+    report = merge(tmp_path / "lora", tmp_path / "merged", like=tmp_path / "sft", log=lambda m: None)
+    [blend] = interpolate(tmp_path / "sft", [0.0], [tmp_path / "w00/checkpoint"], toward=tmp_path / "lora", blend_head=True, log=lambda m: None)
+    out = tmp_path / "merged/checkpoint"
+    got, want, sft = (load_file(d / "model.safetensors") for d in (out, tmp_path / "w00/checkpoint", tmp_path / "sft"))
+    assert got.keys() == want.keys() == sft.keys() and all(torch.equal(got[k], want[k]) and got[k].dtype == torch.bfloat16 for k in want)
+    base = load_file(tiny_base / "base/model.safetensors")
+    assert any(not torch.equal(got[k], base["model." + k]) for k in got), "the adapter moved no weight"
+    assert json.loads((out / "config.json").read_text(encoding="utf-8")) == json.loads((tmp_path / "sft/config.json").read_text(encoding="utf-8"))
+    files = {p.name for p in out.iterdir()}
+    assert {"config.json", "model.safetensors", "head.pt", "tokenizer.json", "tokenizer_config.json"} <= files
+    assert not files & {"adapter_config.json", "adapter_model.safetensors", "training_config.json", "provenance.json"}
+    lora, meta = read_meta(tmp_path / "lora"), read_meta(out)
+    assert (meta.weights, meta.lora, meta.weights_dtype) == ("full", 0, "bf16") and (lora.weights, lora.lora) == ("lora", 4)
+    assert all(torch.equal(meta.head[k], lora.head[k]) for k in lora.head) and meta.head.keys() == lora.head.keys()
+    assert (meta.temperature, meta.head_dim, meta.base, meta.base_revision) == (lora.temperature, lora.head_dim, lora.base, lora.base_revision)
+    assert meta.extra["args"] == lora.extra["args"]
+    info = meta.extra["merged_lora"]
+    assert info["source"] == {"path": str(tmp_path / "lora"), "resolved": str(tmp_path / "lora"), "weights_sha256": Checkpoint(tmp_path / "lora").weights_sha256(),
+                              "head_sha256": digest(tmp_path / "lora/head.pt")}
+    assert info["adapted_tensors"] == blend["toward"]["adapted_tensors"] > 0
+    ck = Checkpoint(out)
+    assert ck.full and report["weights_sha256"] == ck.weights_sha256() == weights_sha256(ck) == blend["weights_sha256"]
+    assert set(report["phases"]) == {"load_base_and_adapter", "merge", "write_backbone", "check_like", "hash_output"}
+    assert read_json(tmp_path / "merged/merge.json") == report and not (tmp_path / "merged/checkpoint.partial").exists()
+
+    tok = load_tokenizer(lora.base)
+    rec = materialize(load_records(tiny_base / "data.jsonl")[0])
+    _, served = Checkpoint(tmp_path / "lora").load("cpu", LoadOptions(fused=True))   # the LoRA folded into bf16, its head
+    _, full = ck.load("cpu")
+    with torch.no_grad():
+        pa, pb = full.probs(full.encode(tok, rec)), served.probs(served.encode(tok, rec))
+    assert max(float((a - b).abs().max()) for a, b in zip(pa, pb)) < 1e-5 and full.head.temperature == served.head.temperature
+
+    train_tiny(tiny_base, tmp_path / "cont", *FULL, "--max_steps", "1", "--init_from", str(out), monkeypatch=monkeypatch)
+    source = read_json(tmp_path / "cont/training_config.json")["init_source"]
+    assert source["tensors"] == len(got) and source["weights_sha256"] == ck.weights_sha256() and source["head_sha256"] == digest(out / "head.pt")
+    with pytest.raises(ValueError, match="head_dim is"):
+        train_tiny(tiny_base, tmp_path / "bad", *FULL, "--max_steps", "1", "--head_dim", "64", "--init_from", str(out), monkeypatch=monkeypatch)
+    with pytest.raises(FileExistsError):
+        merge(tmp_path / "lora", tmp_path / "merged", log=lambda m: None)
+    with pytest.raises(ValueError, match="full-weight checkpoint already"):
+        merge(tmp_path / "sft", tmp_path / "again", log=lambda m: None)
+
+
 def test_master_adamw_is_adamw_on_fp32_masters():
     """MasterAdamW with host masters = torch AdamW after clip_grad_norm_, step for step; bf16 weights hold bf16(master)."""
     from kev.full_ft import MasterAdamW

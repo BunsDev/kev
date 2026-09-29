@@ -151,7 +151,10 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   `temperature` pool's `ci: {level, samples, seed}` adds each arm's bootstrap interval of its pooled T (`temperature_ci`). An arm may be a checkpoint without a trial (`"checkpoint": "/runs/..."`, its "transfer" rows
   from a `transfer_read`), e.g. a WiSE-FT interpolation (`scripts/interpolate_checkpoint.py`, `modal_app.py::interpolate`: with the
   base, or `--toward` another checkpoint of the same base and revision, full weights or a LoRA merged in fp32, `--blend_head` to blend the
-  pointer heads too; round 23);
+  pointer heads too; round 23); a LoRA checkpoint as a full-weight one, to start `kev.train --full_ft 1 --init_from` from it
+  (`scripts/merge_lora_checkpoint.py`, `modal_app.py::merge_adapter --lora <repo@rev> --out /runs/... [--like <full ckpt>]`: the same
+  fp32 W + delta rounded once as `--toward` at α 0, the LoRA's head and meta with `lora 0`, `weights "full"`; Kev-27B at
+  `/runs/r25-init/kev-27b-merged/checkpoint`, weights `f61fb0c5…`, ~6 min on 8 CPUs, `runs/r25-init/kev-27b-merged/merge.json`);
   deltas are `kev.rounds.paired` (2,000 resamples, seed 0, micro). Rounds 5-18 are recorded specs (`"archive": "research-archive-2026-09-24"`): their plans, reads, data builders
   and per-round scripts live on that git tag, not on main; `validate` lists what this checkout lacks instead of failing, and
   `launch`/`watch`/`launch-reads` refuse a recorded round (a new round is a new spec, without `archive`, and must have its plans

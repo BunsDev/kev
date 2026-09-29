@@ -114,14 +114,16 @@ def full_endpoint(ck):
     return Endpoint(shapes, tensor, {"kind": "full"})
 
 
-def lora_endpoint(ck):
-    """The LoRA checkpoint's merged backbone in fp32: W (the base as its loader builds it) + peft's get_delta_weight."""
+def load_lora(ck, what="--toward"):
+    """(peft model, {name: base tensor}, {weight name: LoraLayer}) of a LoRA checkpoint on its base as its loader builds it
+    (the checkpoint's weights dtype). The base tensors share storage with the backbone the peft model wraps. Refuses
+    anything a merge would change outside W + delta."""
     from peft import PeftModel
     from peft.tuners.lora import LoraLayer
     config = ck.adapter_config()
     unsupported = [k for k in ("use_dora", "lora_bias", "modules_to_save", "trainable_token_indices") if config.get(k)]
     if unsupported or ck.meta.special_embeddings:
-        raise ValueError(f"--toward {ck.path}: {unsupported or ['special_embeddings']} change weights outside W + delta; not supported")
+        raise ValueError(f"{what} {ck.path}: {unsupported or ['special_embeddings']} change weights outside W + delta; not supported")
     lm = build_backbone(ck.meta).lm
     plain = lm.state_dict()                          # the base's tensors under the backbone's own names (shared storage)
     model = PeftModel.from_pretrained(lm, ck.path, torch_device="cpu")
@@ -129,11 +131,17 @@ def lora_endpoint(ck):
     for name, module in model.named_modules():
         if not isinstance(module, LoraLayer): continue
         weight = name.removeprefix("base_model.model.") + ".weight"
-        if weight not in plain: raise ValueError(f"--toward {ck.path}: adapted layer {name} has no base tensor {weight}")
-        if module.merged or list(module.lora_variant): raise ValueError(f"--toward {ck.path}: {name} is merged or a LoRA variant")
-        if list(module.active_adapters) != ["default"]: raise ValueError(f"--toward {ck.path}: {name} has adapters {module.active_adapters}")
+        if weight not in plain: raise ValueError(f"{what} {ck.path}: adapted layer {name} has no base tensor {weight}")
+        if module.merged or list(module.lora_variant): raise ValueError(f"{what} {ck.path}: {name} is merged or a LoRA variant")
+        if list(module.active_adapters) != ["default"]: raise ValueError(f"{what} {ck.path}: {name} has adapters {module.active_adapters}")
         layers[weight] = module
-    if not layers: raise ValueError(f"--toward {ck.path}: no LoRA layers were loaded")
+    if not layers: raise ValueError(f"{what} {ck.path}: no LoRA layers were loaded")
+    return model, plain, layers
+
+
+def lora_endpoint(ck):
+    """The LoRA checkpoint's merged backbone in fp32: W (the base as its loader builds it) + peft's get_delta_weight."""
+    _, plain, layers = load_lora(ck)
 
     def tensor(name):
         if name not in layers: return plain[name]

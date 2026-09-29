@@ -461,6 +461,49 @@ def interpolate(sft: str, prefix: str, alphas: str = "0.85,0.70,0.50", base: str
         print(f"{name}: alpha {report['alpha']}, {report['tensors']} tensors, weights {report['weights_sha256'][:12]}, {report['seconds']} s", flush=True)
 
 
+MERGE_TIMEOUT = 7200   # round 25's Kev-27B merge: base load + merge + a 51 GB write + hash, well under an hour expected
+
+
+@app.function(image=image, cpu=INTERPOLATE_CPU, memory=INTERPOLATE_MEMORY, retries=0, timeout=MERGE_TIMEOUT,
+              volumes={RUNS_MOUNT: runs_volume, HF_MOUNT: hf_cache}, secrets=secrets)
+def run_merge_adapter(lora, out, like=None):
+    """scripts/merge_lora_checkpoint.py on a CPU container: <out>/checkpoint on the runs volume, then one commit (timed)."""
+    sys.path.insert(0, "/root")
+    from scripts.merge_lora_checkpoint import merge
+    runs_volume.reload()
+    started = time.time()
+    try:
+        report = merge(lora, out, like, log=lambda m: print(f"[{time.time() - started:7.1f} s] {m}", flush=True))
+    finally:
+        commit = time.time(); runs_volume.commit()
+        print(f"runs volume commit: {time.time() - commit:.1f} s", flush=True)
+    return {**report, "commit_seconds": round(time.time() - commit, 1), "container_seconds": round(time.time() - started, 1)}
+
+
+@app.local_entrypoint()
+def merge_adapter(lora: str, out: str, like: str = ""):
+    """A LoRA checkpoint (a pinned Hub id repo@revision or a /runs/... directory) merged into its base as a full-weight
+    checkpoint at <out>/checkpoint on the runs volume (scripts/merge_lora_checkpoint.py), e.g. round 25's initialization
+    --lora jaredpalmer/kev-27b@<sha> --out /runs/r25-init/kev-27b-merged [--like /runs/<full-weight trial>/checkpoint].
+    The report lands in runs/<out without /runs>/merge.json."""
+    sys.path.insert(0, str(ROOT))
+    from kev.checkpoint import is_hub_id
+    if not out.startswith(f"{RUNS_MOUNT}/"): raise SystemExit(f"--out is a directory on the runs volume ({RUNS_MOUNT}/...), not {out}")
+    if not (lora.startswith(f"{RUNS_MOUNT}/") or (is_hub_id(lora) and "@" in lora)):
+        raise SystemExit(f"--lora is a checkpoint on the runs volume ({RUNS_MOUNT}/...) or a pinned Hub id (repo@revision), not {lora}")
+    rel = out.removeprefix(RUNS_MOUNT).rstrip("/")
+    try: existing = volume_names(rel)[0]
+    except Exception: existing = set()   # nothing there yet (listdir of a missing path raises)
+    if "checkpoint" in existing: raise SystemExit(f"{rel}/checkpoint exists; merges are written once")
+    print(f"admission bound ${interpolation_bound(MERGE_TIMEOUT):.2f} ({INTERPOLATE_CPU} CPU, {INTERPOLATE_MEMORY[1] // 1024} GiB, {MERGE_TIMEOUT} s, no GPU)", flush=True)
+    call = run_merge_adapter.spawn(lora, out, like or None)
+    print(f"spawned merge of {lora} -> {out}/checkpoint: call {call.object_id}", flush=True)
+    report = call.get()
+    (ROOT / "runs" / rel.lstrip("/")).mkdir(parents=True, exist_ok=True)
+    pull_volume(f"{rel}/merge.json", ROOT / "runs" / rel.lstrip("/"))
+    print(json.dumps(report, indent=1), flush=True)
+
+
 @app.function(image=image, gpu=GPU, cpu=2, memory=(32768, 65536), retries=0, timeout=3600,
               volumes={RUNS_MOUNT: runs_volume, HF_MOUNT: hf_cache}, secrets=secrets)
 def run_anchors(base, suite, name, revision=None):
