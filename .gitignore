@@ -458,3 +458,51 @@ runs/r25-27b-lr*e6/00-trial-0/checkpoint/*
 !runs/r25-27b-lr*e6/00-trial-0/snapshots/*/checkpoint/
 runs/r25-27b-lr*e6/00-trial-0/snapshots/*/checkpoint/*
 !runs/r25-27b-lr*e6/00-trial-0/snapshots/*/checkpoint/snapshot.json
+# round 26 (experiments/rounds/r26.json): the read-out (round26.json, readout.txt, tables.md), its report-only extras
+# (vs-r25* / vs-w85* against round 25's lr 1e-6 arm and round 23's 27b-k-w85, breadth-ece-by-t.json and the scripts that
+# wrote them, incl. the spend gate and launch helpers) and private-rows manifest; the read launch records; every public-suite
+# read's report + rows; the ood-v2 / agents-ood-v1 / guardrails-ood-v1 reads' reports (aggregates only); the trial's
+# provenance.json, result-public.json (result.json without the per-task table), in-trial transfer rows, in-trial calibration
+# temperature, training metrics and the snapshot.json records. Private (jaredpalmer/kev-private-train runs/r26/,
+# runs/r26-readout/private-rows.json, scripts/private_rows.py restore): every tasksource-heldout-v1 read (rows and report),
+# the ood / agents-ood / guardrails-ood rows, the trial's development rows and full result.json. Checkpoints (~51 GB each)
+# stay on the kev-runs volume.
+!runs/r26-readout/
+runs/r26-readout/*
+!runs/r26-readout/round26.json
+!runs/r26-readout/readout.txt
+!runs/r26-readout/tables.md
+!runs/r26-readout/vs-*.md
+!runs/r26-readout/vs-*.json
+!runs/r26-readout/breadth-ece-by-t.json
+!runs/r26-readout/both-bars-by-t.json
+!runs/r26-readout/private-rows.json
+!runs/r26-readout/r26-*.py
+!runs/r26-readout/r26-*.sh
+!runs/r26-reads-*.json
+!runs/r26-27b-*/
+runs/r26-27b-*/*
+!runs/r26-27b-*/report.json
+!runs/r26-27b-*/rows.json
+runs/r26-27b-*-tsheld/
+runs/r26-27b-*-ood/rows.json
+runs/r26-27b-*-agentsood/rows.json
+runs/r26-27b-*-guardood/rows.json
+!runs/r26-27b-lr1e6/00-trial-0/
+runs/r26-27b-lr1e6/00-trial-0/*
+!runs/r26-27b-lr1e6/00-trial-0/provenance.json
+!runs/r26-27b-lr1e6/00-trial-0/result-public.json
+!runs/r26-27b-lr1e6/00-trial-0/transfer/
+runs/r26-27b-lr1e6/00-trial-0/transfer/*
+!runs/r26-27b-lr1e6/00-trial-0/transfer/rows.json
+!runs/r26-27b-lr1e6/00-trial-0/calibration/
+runs/r26-27b-lr1e6/00-trial-0/calibration/*
+!runs/r26-27b-lr1e6/00-trial-0/calibration/temperature.json
+!runs/r26-27b-lr1e6/00-trial-0/checkpoint/
+runs/r26-27b-lr1e6/00-trial-0/checkpoint/*
+!runs/r26-27b-lr1e6/00-trial-0/checkpoint/training_metrics.json
+!runs/r26-27b-lr1e6/00-trial-0/snapshots/
+!runs/r26-27b-lr1e6/00-trial-0/snapshots/*/
+!runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/
+runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/*
+!runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/snapshot.json
