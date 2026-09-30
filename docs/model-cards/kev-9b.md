@@ -23,6 +23,8 @@ datasets:
   - fancyzhx/dbpedia_14
   - SetFit/amazon_reviews_multi_en
   - stanfordnlp/imdb
+  - bigcode/commitpackft
+  - davidheineman/consumer-finance-complaints-large
 metrics:
   - accuracy
   - brier_score
@@ -30,97 +32,168 @@ metrics:
 model-index:
   - name: Kev-9B
     results:
-      - task: { type: text-classification, name: typed decision (choice / noul / score) }
-        dataset: { type: mixed, name: "decision-v7 development (1,204 records; ten trained public sources + programmatic policy data)" }
-        metrics:
-          - { type: accuracy, value: 0.872 }
-          - { type: expected_calibration_error, value: 0.076, name: "ECE, raw probabilities" }
-      - task: { type: text-classification, name: typed decision, out-of-domain }
-        dataset: { type: mixed, name: "transfer-v4 development (764 records; six never-trained sources + held-out policy structures)" }
-        metrics:
-          - { type: accuracy, value: 0.822 }
-          - { type: brier_score, value: 0.286 }
       - task: { type: text-classification, name: typed decision, out-of-domain, locked test }
-        dataset: { type: mixed, name: "transfer-v4 test (read once)" }
+        dataset: { type: mixed, name: "transfer-v4 test (locked)" }
         metrics:
           - { type: accuracy, value: 0.852 }
-          - { type: brier_score, value: 0.237 }
+          - { type: brier_score, value: 0.199 }
+      - task: { type: text-classification, name: long policy documents, test }
+        dataset: { type: mixed, name: "hard-v1 test (1,088 questions)" }
+        metrics:
+          - { type: accuracy, value: 0.834 }
+      - task: { type: text-classification, name: developer-tool decisions, test }
+        dataset: { type: mixed, name: "devtools-v1 test (1,071 questions)" }
+        metrics:
+          - { type: accuracy, value: 0.791 }
+      - task: { type: text-classification, name: real complaints, test }
+        dataset: { type: mixed, name: "documents-v1 test (936 questions)" }
+        metrics:
+          - { type: accuracy, value: 0.900 }
 ---
 
 # Kev-9B
 
-Kev-9B is a **decision model**: one document (the *state*) and a set of typed questions in, a probability distribution per question out, in one forward pass. No text generation. It is a LoRA adapter (r=16, 45.4M trainable parameters) plus a pointer head on `Qwen/Qwen3.5-9B-Base` (revision `68c46c4b`), serving TypeSafe's public `/v1/systemone` contract.
+This is **Kev-9B v2**, released 2026-09-30 on the `main` branch of `jaredpalmer/kev-9b`.
 
-**The most accurate Kev.** Out of domain it scores 0.822 on the development partition and **0.852 on the locked test** (Jev: 0.857 on the development items), with the lowest Brier of any Kev (0.237 on the test) and held-out rule pairs at 0.81–0.83. This checkpoint is the `decision-v7` recipe (trial `q35-9b/01-trial-1`, seed 1, selected on development accuracy) followed by a 15-minute **delta fine-tune** (`--init_from`, lr 2e-5, one epoch) on 1,425 additional records — date-bearing policy cases rendered with explicit day counts, and evidence-free cases with uniform targets — mixed with 2,000 replayed training records. Against the pre-delta checkpoint on the locked test: +1.8 pp [+0.8, +2.9], Brier 0.243 → 0.237, `deadline` 0.72 → 0.88.
+> **Previous version.** Kev-9B v1 (trial `night2-9b-du/00-trial-0`, T 2.30) stays on the Hub at
+> [`jaredpalmer/kev-9b@v1`](https://huggingface.co/jaredpalmer/kev-9b/tree/v1). Its headline numbers: locked transfer-v4 test **0.852**
+> with served Brier **0.224**, hard-v1 test 0.584, devtools-v1 test 0.637, documents-v1 test 0.829. Its card is the README at that tag
+> (and `docs/model-cards/kev-9b.md` in the [Kev repository](https://github.com/jaredpalmer/kev) before 2026-09-30). Below, "Kev-9B v1" is that checkpoint; every comparison is against it.
 
-- Hub: `jaredpalmer/kev-9b` (this repo; trial `night2-9b-du/00-trial-0`). The pre-delta checkpoint is at revision `v7-base`.
-- Demo: [huggingface.co/spaces/jaredpalmer/kev](https://huggingface.co/spaces/jaredpalmer/kev) runs Kev-4B and Kev-0.8B on ZeroGPU with the same encoder and API code as `kev.serve`.
-- Code, suites, every trial with hashes and paired bootstraps: [github.com/jaredpalmer/kev](https://github.com/jaredpalmer/kev) — `PLAN.md` (the full record, including the Qwen3.5 port and this experiment under History, is at git tag `research-archive-2026-09-24`), `runs/leaderboard.md`
+Kev-9B v2 is a **decision model**: one document (the *state*) and a set of typed questions in, a probability distribution per question out, in one forward pass. No text generation. It serves TypeSafe's public `/v1/systemone` contract, like every Kev. It is a rank-16 LoRA adapter (45.4M trainable parameters) plus a pointer head on `Qwen/Qwen3.5-9B-Base` (revision `68c46c4b`), made in one step on top of v1:
 
-## Results (same frozen items for every row)
+1. **Documents and skills delta.** Kev-9B v1 was trained for one more epoch on round 15's joint data: documents-v1 train (real CFPB complaint narratives) and round 10's skills data (hard-v1 and devtools-v1 train), 16,539 records, with 10,000 records replayed from `decision-v7` (round 18, arm (a)). It is the recipe that confirmed Kev-0.8B in round 15, and the data that Kev-4B has had since round 10.
 
-| | Kev-8B (Qwen3) | Kev-9B before the delta (`v7-base`) | **Kev-9B, raw logits** | **Kev-9B as served (T = 2.30)** | Jev |
-|---|---|---|---|---|---|
-| in-distribution accuracy (decision-v7 dev, 1,204 records) | 0.863 | 0.876 | 0.872 | 0.872 | 0.845 |
-| out-of-domain accuracy (transfer-v4 dev, 764 records) | 0.796 | 0.812 | **0.822** | 0.822 | 0.857 |
-| out-of-domain Brier | 0.337 | 0.291 | 0.286 | **0.264** | 0.211 |
-| out-of-domain ECE | 0.121 | 0.105 | 0.106 | **0.042** | 0.049 |
-| confident errors out of domain (p ≥ 0.9 and wrong) | 9.9% | 7.5% | 8.7% | **4.0%** | 3.7% |
-| coverage at ≤ 5% error (share of decisions automatable) | 0.45 | 0.53 | 0.47 | 0.45 | 0.70 |
-| held-out policy structures, both siblings correct | 0.69 | 0.80 | **0.83** | 0.83 | 0.86 |
-| unknowable items answered at ≥ 0.9 (lower is better; transfer-v9) | 0.26 | 0.05 | **0.00** | 0.00 | 0.09 |
-| **locked test**, out-of-domain accuracy / Brier | 0.780 / 0.327 | 0.837 / 0.243 | **0.852 / 0.237** | – | – |
-| **locked test**, in-distribution accuracy | 0.870 | 0.873 | 0.874 | – | – |
+It is served at temperature **2.19**. That value was fitted on held-out datasets it never trained on.
 
-Per-source out-of-domain accuracy (Kev-9B / Jev): QNLI 0.93 / 0.93, SciQ 0.96 / 0.99, TweetEval-offensive 0.78 / 0.81, PAWS 0.76 / 0.79, MMLU 0.74 / 0.90, Emotion 0.60 / 0.59, deadline (3-level date arithmetic) 0.80 / 0.93 — **0.90 with the `date_facts` preprocessor** (below), (A or B) and C 0.91 / 0.91, (A and B) or not C 0.88 / 0.97, if A then not B else C 0.91 / 0.78.
+**What it is better at than Kev-9B v1.** The comparisons below were registered before the confirmation reads, and every paired interval is a 95 % record-clustered bootstrap.
+- Long policy documents (hard-v1 test): **+25.0 pp [+22.0, +28.1]**.
+- Developer-tool decisions (devtools-v1 test, registered sources): **+9.9 pp [+7.2, +12.5]**.
+- Real complaints (documents-v1 test): **+7.1 pp [+4.7, +9.2]**; the private held-out documents-v2, **+8.0 pp [+5.9, +10.2]**.
+- On the locked out-of-domain test it is level: **0.852** against 0.852 (+0.0 pp [−1.7, +1.8]), with served Brier **0.199** against 0.224 (−0.025 [−0.047, −0.007]).
 
-**Calibration is built in.** `head.pt` carries a temperature (T = 2.30) fitted on this checkpoint's in-distribution development rows by minimising negative log-likelihood ([`scripts/calibrate_checkpoint.py`](https://github.com/jaredpalmer/kev/blob/main/scripts/calibrate_checkpoint.py)); the pointer head divides its logits by it at inference. Every loader — `kev.serve`, `kev.benchmark`, the Space, anyone's harness — gets the calibrated probabilities by default. It never changes an answer: the argmax is identical, so accuracy is the same in both columns; confidences are re-ordered only slightly across questions with different option counts, which is why coverage moves by a point or two. `KEV_TEMPERATURE=1.0` restores the raw logits; the raw column is what the training produced. Per-(type, option-count) temperatures were tested and are worse out of domain. The fit uses no out-of-domain or test data.
+**Read this first.**
+- **The selection was not blind.** This delta was trained and read on development in round 18 (2026-09-24), where it passed both primaries and failed only WANLI-v2, scienthoon and the pooled externals. All three were later removed or ungated as unsound gates. Round 27 re-selected round 18's two finished arms on the audited rule, knowing their development numbers. The test partitions and the locked read, each read once for this checkpoint, are the guard (`PLAN.md`, "Round 27 (registered)").
+- **Its large gains are in distribution.** hard-v1, devtools-v1 and documents-v1 train partitions are in its training data. Those gains are held-out items and templates of trained families, not transfer. On datasets it never trained on it is level with v1 (breadth-v1 below).
+- **It is not better than v1 on new work.** breadth-v1 test +0.6 pp [−0.4, +1.6], transfer-v4 development −0.2 pp [−2.4, +1.8], transfer-r3 test +0.0 pp [−1.2, +1.2].
+- **Its temperature was written, not refitted.** `scripts/calibrate_checkpoint.py` cannot list the sources of `evals/round15/joint`, so it refuses to fit. The value in `head.pt` is round 27's own pool fit, written with `--temperature` and the reason recorded, after `kev.rounds validate` had checked the pool against the arm's training. That check does not cover `evals/night2`, v1's own dates / unknowable delta, whose manifest lists no sources. Its records are four synthetic families, none of them in the pool.
 
-**`date_facts` preprocessor.** Kev, like every Kev before it, cannot subtract dates reliably (the untrained base can; LoRA training erodes it). It can use a stated day count. `KEV_DATE_FACTS=1` appends one sentence per pair of absolute dates found in the state ("June 26, 2026 is 8 days before July 4, 2026"); this checkpoint was trained on such renderings, so with it `deadline` goes from 0.80 to 0.90 and overall out-of-domain accuracy from 0.822 to 0.828. It is preprocessing, reported separately, never folded into the model's own numbers.
+## Confirmation (registered, round 27)
 
-**What the delta cost.** Coverage at ≤ 5% error fell (0.53 → 0.47 on development; 0.66 → 0.62 on the locked test), confident errors rose (7.5% → 8.7% raw), MMLU-Pro fell 0.545 → 0.515, and scienthoon's ECE rose 0.082 → 0.113. The pre-registered criteria for the delta (`PLAN.md` at tag `research-archive-2026-09-24`, "Round 2 autoresearch") were met for dates and for the unknowable-confidence behaviour and *not* met for coverage; the locked read decided promotion.
+Round 27 had two candidates, round 18's arms at lr 2e-5 and 1e-5. Both passed the development rule, and this checkpoint (`9b-r18a`, lr 2e-5) ranked first. It was then confirmed with round 18's stages, one read each ([`experiments/rounds/r27.json`](https://github.com/jaredpalmer/kev/blob/main/experiments/rounds/r27.json); verdicts in `runs/r27-verdict/`).
+- Every delta is paired against Kev-9B v1, in percentage points.
+- v2 is served at its pool temperature 2.19 and v1 at its shipped 2.30.
+- devtools-v1 is without `flakeflagger` and `commitpackft_type` in every panel, as the 2026-09-27 audit registered; the same rows leave both sides.
 
-**Newer evaluation columns** (`transfer-v9` development, Kev-9B / Jev): MMLU-Pro (10-way) 0.515 / 0.840; state buried among unrelated records 0.74 / 0.70; unknowable share at ≥ 0.9 confidence 0.00 / 0.09 (intact controls 0.95).
+| stage / criterion (panel, questions) | Kev-9B v2 | Kev-9B v1 | Δ [95 %] | verdict |
+|---|---|---|---|---|
+| development: hard-v1 + devtools-v1 accuracy, lower bound > 0 (1,855) | 0.821 | 0.628 | +19.3 [+17.2, +21.6] | pass |
+| development: documents-v1 accuracy, lower bound > 0 (920) | 0.902 | 0.833 | +7.0 [+4.8, +9.2] | pass |
+| development: short states (transfer-v4 dev + transfer-r3 test, without `emotion`), accuracy lower ≥ −2 (1,586) | 0.871 | 0.871 | +0.1 [−1.1, +1.2] | pass |
+| development: short-state Brier upper ≤ +0.02 / confident errors upper ≤ +1 pp | 0.197 / 2.3 % | 0.197 / 3.7 % | −0.000 / −1.3 pp | pass |
+| tests: hard-v1 + devtools-v1 test accuracy, lower bound > 0 (1,859) | 0.822 | 0.635 | +18.7 [+16.7, +20.8] | pass |
+| tests: documents-v1 test accuracy, lower bound > 0 (936) | 0.900 | 0.829 | +7.1 [+4.7, +9.2] | pass |
+| **locked: transfer-v4 locked accuracy ≥ v1 − 1 pp (656)** | **0.852** | 0.852 | +0.0 [−1.7, +1.8] | pass |
+| locked: served Brier ≤ v1 + 0.005 (656) | 0.199 | 0.224 | −0.025 [−0.047, −0.007] | pass |
 
-**External suites** (same items as their published Jev numbers): SemIf's authored 144 — 0.917 before the delta (live Jev 0.965; SemIf's untrained Qwen3.5-4B 0.813); scienthoon's 900 tickets — queue 0.952, angry 0.900, ECE 0.113 (Jev 0.897, 0.914, 0.105). On ekzhang's 1,000-question MMLU-Pro sample the shipped checkpoint scores 0.511 over all 1,000 questions (8 exceed the state limit and count as wrong; live Jev 0.835 on the same items, ekzhang reports 0.829). On SemIf's pinned third-party selections (`evals/external/{wanli,typesafe}-v1`): WANLI-256 accuracy 0.703 (live Jev 0.758); TypeSafe-102 equal-case agreement / total-variation distance 0.809 / 0.226 over the 89 rows within the 8,192-token serving context (13 rejected), 0.728 / 0.304 over all 102 with rejected rows scored as wrong (live Jev 0.891 / 0.125; published TypeSafe answers 0.883 / 0.127); plain accuracy on the answered rows 0.820, coverage at <= 5% error 0.29 (Jev 0.892, 0.84). The shipped temperature is fitted in distribution and does not transfer to every workload. On WANLI, a single temperature fitted on the workload's own labelled rows (`python -m kev.calibrate`, group-disjoint out-of-fold) lowers ECE from 0.131 as shipped to 0.037 (workload T 3.56 against the shipped 2.30). Accuracy is unchanged and coverage at <= 5% error does not improve. On TypeSafe the shipped temperature already fits and refitting does not help (ECE 0.074 as shipped, 0.092 out of fold).
+The development rule also held unknowable answers at ≥ 0.9 confidence under 5 % (0 %) and hard-v1 ECE within 0.01 of v1's (0.050 against 0.073).
 
-The scienthoon suite was retired as a Kev evaluation on 2026-09-27: its tickets are templated, and one of its three questions (`priority`) depends on an organisational rule that the text does not state (`PLAN.md`). The scienthoon figures on this card are kept as the record of how the release was decided.
+Report-only test reads:
 
-WANLI (`wanli-v1`, `wanli-v2`) and TypeSafe's public evals (`typesafe-v1`) were retired as Kev evaluations on 2026-09-30: about a quarter of the WANLI pairs are ones its two annotators labelled differently, with the gold set to one of the two labels, and TypeSafe's gold is the averaged answer of two closed frontier models, on too few questions to tell checkpoints apart (`PLAN.md`, "WANLI and TypeSafe removed"). Their figures on this card are kept as the record.
+| panel (questions) | Kev-9B v2 | Kev-9B v1 | Δ [95 %] |
+|---|---|---|---|
+| hard-v1 test (1,088) | 0.834 | 0.584 | +25.0 [+22.0, +28.1] |
+| devtools-v1 test, all sources (1,071) | 0.791 | 0.637 | +15.4 [+11.0, +19.4] |
+| documents-v2, private held-out test (953) | 0.900 | 0.821 | +8.0 [+5.9, +10.2] |
+| breadth-v1 test, all 14 datasets (3,089) | 0.698 | 0.692 | +0.6 [−0.4, +1.6] |
+
+## Breadth index on test
+
+This is the chance-corrected index of the community Decision Index, computed over breadth-v1's 14 held-out datasets in five areas (`scripts/breadth_report.py`).
+
+| | Kev-9B v2 | Kev-9B v1 | Kev-4B | Kev-27B |
+|---|---|---|---|---|
+| index (95 % CI) | **41.0** [38.8, 43.9] | 40.0 [38.1, 43.0] | 38.0 [35.5, 41.3] | 52.3 [49.2, 55.4] |
+
+Against Kev-9B v1 the index is +1.0 [−0.9, +2.5]: level.
+
+## Results as served (whole suites)
+
+The table below uses whole suites (minus two duplicated CodeReviewer ids), with no exclusions. Each model is at its own served temperature. Numbers come from `runs/release/kev-9b-r27.json` (`scripts/release_numbers.py --release kev-9b-r27`).
+
+| | **Kev-9B v2 (T = 2.19)** | Kev-9B v1 (T = 2.30) |
+|---|---|---|
+| **locked test**, out-of-domain accuracy / Brier (transfer-v4) | **0.852 / 0.199** | 0.852 / 0.224 |
+| locked test, ECE / confident errors (p ≥ 0.9 and wrong) | **0.034 / 1.4 %** | 0.042 / 3.2 % |
+| locked test, coverage at ≤ 5 % error | **0.742** | 0.645 |
+| out-of-domain accuracy / Brier (transfer-v4 development) | 0.820 / 0.262 | 0.822 / 0.264 |
+| short states, transfer-r3 test (`emotion` included) | 0.847 | 0.847 |
+| MMLU-Pro (transfer-v9 development, 10-way) | 0.590 | 0.515 |
+| unknowable items answered at ≥ 0.9 (lower is better) | 0.00 | 0.00 |
+| breadth-v1 development / test, all 14 datasets | 0.700 / 0.698 | 0.697 / 0.692 |
+| hard-v1 development / test | 0.813 / 0.834 | 0.574 / 0.584 |
+| devtools-v1 development / test, all sources | 0.772 / 0.791 | 0.631 / 0.637 |
+| documents-v1 development / test (CFPB complaints) | 0.902 / 0.900 | 0.833 / 0.829 |
+| documents-v2 (private held-out test) | 0.900 | 0.821 |
+| SemIf (144 authored decisions) | 0.917 | 0.910 |
+
+## Calibration
+
+`head.pt` carries temperature **2.19** (2.1936), round 27's registered pool fit:
+- transfer-r3's calibration partition, eight held-out public sources, 448 questions;
+- transfer-v9 development MMLU-Pro, 200 questions;
+- minus any transfer-v4 development duplicates (none);
+- 648 questions in all.
+
+The pooled T has a 90 % bootstrap interval of [2.05, 2.41]. On the pool, ECE goes from 0.125 raw to 0.041; on transfer-v4 development, from 0.103 to 0.041. `KEV_TEMPERATURE=1.0` gives the raw logits.
+
+Kev-9B v1's 2.30 was fitted on its own decision-v7 development rows, held-out items of what it trained on. The standing rules no longer allow that, and v2 is the first 9B served at a held-out-pool temperature. As served, test-partition ECE against Kev-9B v1:
+- breadth-v1, all 14 datasets: 0.034 against 0.044;
+- hard-v1: 0.054 against 0.075;
+- devtools-v1: 0.098 against 0.147;
+- documents-v1: 0.017 against 0.103.
+
+A read of the staged checkpoint on semif-v1 (`runs/rel9-staged-semif`) reproduces round 18's rows at T 2.19: equal logits over T, 0 flips.
 
 ## How it was built
 
-- **Base model**: Qwen3.5-9B-Base, a hybrid of 24 Gated DeltaNet (linear attention) layers and 8 full-attention layers. Because the recurrent layers cannot honour a block-causal mask, questions run as separate causal rows that continue from the shared state (`kev/model.py: forward_rows_batch`); isolation is exact by construction (together vs alone within 1e-5) and on attention-only models this form is bit-identical to the packed one.
-- **Recipe**: `decision-v7`, two epochs, LoRA r=16 (attention, MLP and DeltaNet projections), lr 5e-5 — the same data and settings as every other Kev, so the Qwen3 → Qwen3.5 difference is the base (`PLAN.md` at tag `research-archive-2026-09-24`, Qwen3.5 port §10: locked test +7.3 pp [+2.8, +11.7] over Kev-8B).
-- **Delta**: `kev.train --init_from jaredpalmer/kev-9b@v7-base --data evals/night2/dates_unknowable.jsonl --replay 2000 --lr 2e-5 --epochs 1`. The 1,425 new records are generated (no public dataset): 900 date-bearing policy cases, a third rendered plainly, a third with a relational day-count sentence, a third with a `date_facts` field; 255 cases with the deciding sentence removed and a uniform soft target over the options, plus their 270 intact controls. Record hashes are in `evals/night2/manifest.json`; the source checkpoint's hashes are in `training_config.json`.
-- Why a delta and not a retrain: it is a controlled change (one fixed checkpoint, one data addition, 15 minutes), and the results section shows exactly what it moved.
+- **Base model**: `Qwen/Qwen3.5-9B-Base` (revision `68c46c4b`, Apache-2.0). It is a hybrid of 24 Gated DeltaNet and 8 full-attention layers, so questions run as separate causal rows continuing from the shared state (`kev/model.py`).
+- **v1** (`jaredpalmer/kev-9b@v1`): the `decision-v7` recipe (two epochs, lr 5e-5) plus the dates / unknowable delta (`evals/night2`, one epoch, lr 2e-5). Its card describes both.
+- **Delta** (round 18, `experiments/round18/joint.json`, arm (a)):
+  - `kev.train --init_from jaredpalmer/kev-9b --data evals/round15/joint/train.jsonl --replay 10000`, one epoch;
+  - learning rate 2e-5, LoRA r=16 on attention, MLP and DeltaNet projections, batch 2 with accumulation 4;
+  - states of at most 7,552 tokens, none-of-the-above pairs on 25 % of Choice records, bf16 autocast, gradient checkpointing;
+  - seed 1, one H200, 2.7 hours.
+- **Data**:
+  - documents-v1 train: CFPB complaint narratives with product and issue labels from open-weight teachers, filtered by closed-model judges and adjudication.
+  - hard-v1 train: programmatically labelled skill records in seven families (long policy documents, trade-offs, probability, multi-hop, temporal / numeric, judging a proposed answer, missing-fact abstention), templates 0-3; evaluation uses templates 4 and 5.
+  - devtools-v1 train: developer-tooling decisions from licence-checked sources, with human, heuristic or by-construction labels, never an LLM's.
+  - No Jev outputs were used.
 
 ## Known limits
 
-- **Slower on a Mac than on a GPU.** The DeltaNet kernels have no MPS implementation, so on Apple Silicon `kev.serve` runs this checkpoint through MLX (`kev/mlx_model.py`, installed by `uv sync --extra serve`); plain PyTorch on MPS takes about 2 s for five questions on an M5. On CUDA with `flash-linear-attention` it answers in tens of milliseconds.
-- Requires `transformers >= 5.17` (the `qwen3_5` architecture) and `peft >= 0.21`.
-- Knowledge (MMLU 0.74 vs Jev 0.90; MMLU-Pro 0.515 vs 0.840) is the remaining gap and is set by the base: the untrained Qwen3.5-9B scores the same, and a Kev on the 35B-A3B MoE did not move MMLU-Pro either (`PLAN.md` at tag `research-archive-2026-09-24`, night-2 results).
-- Date arithmetic without the preprocessor: `deadline` 0.80 (Jev 0.93). With `KEV_DATE_FACTS=1`: 0.90.
-- The raw logits are over-confident out of domain; the built-in temperature (T = 2.30) fixes most of it without changing any answer. `KEV_TEMPERATURE=1.0` gives the raw values. Coverage at a 5% error budget is 0.47–0.62 against Jev's 0.70.
-- 9B bf16 needs ~19 GB of GPU memory for its weights and ~22 GB with the server's batching buffers; training took 91 min on one H100 (peak 39.5 GB).
+- Its gains are on the families it trained on; on held-out datasets it is level with v1, and Kev-27B leads it by 11 points on the breadth index.
+- Knowledge is set by the base: MMLU-Pro 0.590, against Kev-27B's 0.675.
+- Trained on states of at most 7,552 tokens. Longer documents are served, up to 65,536 tokens, but not what it was trained for.
+- devtools-v1 is its least calibrated suite (test ECE 0.098).
+- Its temperature has a 90 % interval of [2.05, 2.41].
+- The DeltaNet kernels have no MPS implementation. On Apple Silicon `kev.serve` runs this checkpoint through MLX (`kev/mlx_model.py`); on CUDA with `flash-linear-attention` it answers in tens of milliseconds.
 
-## Training
+## Intended use
 
-Frozen suite `evals/v7/decision-v7`: 10,000 public records (1,000 per source), 896 policy minimal-pair records over nine template families, 1,680 records from 60 randomly generated rule structures in four rendering styles. Two epochs, LoRA r=16 α=32 on `q/k/v/o_proj`, `gate/up/down_proj`, `in_proj_qkv/z/a/b`, `out_proj`; pointer head from scratch; cross-entropy on the option distribution; lr 5e-5 (OneCycle), effective batch 8, bf16 autocast with fp32 master weights, gradient checkpointing; option permutation, none-of-the-above insertion, distractors, none minimal pairs on 25% of Choice records. Then the delta described above (one epoch, lr 2e-5, 3,937 records seen, 15 minutes on one H100). No Jev outputs were used for training.
-
-## Evaluation protocol
-
-Development partitions select models; the locked test partition is read at most once per candidate (`runs/locked/kev-9b-night2-du-ungated/`; the pre-delta read is `runs/locked/kev-9b-q35/`). Every number carries suite hash, code hashes and git commit in `result.json`. Untrained-base baselines use zero-shot letter logits on the same items (`scripts/base_mmlu_probe.py`).
+Kev-9B v2 is meant for typed decisions over documents of a few thousand tokens: classification, routing, extraction choices and policy checks, served behind TypeSafe's System One contract, where calibrated probabilities feed thresholds and review queues. It fits a single L40S or H100.
+- Freeze thresholds on your own labelled workload, and refit the temperature on it if it differs from what Kev trained on (`kev.calibrate`).
+- It is not a generative model or a chat model. It does not replace a human decision where errors are costly.
 
 ## Use
 
 ```bash
-uv run --extra serve python -m kev.serve --run jaredpalmer/kev-9b --port 8008      # KEV_DTYPE=bf16 on a 32 GB Mac; slow on MPS, see limits
-KEV_DATE_FACTS=1 uv run --extra serve python -m kev.serve --run jaredpalmer/kev-9b --port 8008   # + date preprocessing; KEV_TEMPERATURE=1.0 for raw logits
+uv run --extra serve python -m kev.serve --run jaredpalmer/kev-9b --port 8008      # CUDA, bf16 + fused kernels + CUDA graphs; MLX on Apple Silicon
+uv run --extra serve python -m kev.serve --run jaredpalmer/kev-9b@v1 --port 8008   # the previous version
 ```
 
 Any TypeSafe-compatible client works: `TypeSafeClient(api_key="local", base_url="http://127.0.0.1:8008", model="kev-latest")`.
 
 ## License
 
-Apache-2.0 for the adapter and head; the Qwen3.5 base is Apache-2.0; datasets carry their own licenses.
+Apache-2.0 for the adapter and head. The Qwen3.5-9B base is Apache-2.0. The training data carries its own licences, recorded per source in the manifests.

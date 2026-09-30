@@ -18,7 +18,7 @@ TASKS = [("sciq", "SciQ"), ("qnli", "QNLI"), ("contrastive_authorization", "Poli
          ("composition_held_or_not", "Rule: (A and B) or not C"), ("tweet_offensive", "TweetEval offensive"), ("paws", "PAWS"),
          ("composition_held_conditional", "Rule: if A then not B else C"), ("mmlu", "MMLU, 4-way"), ("contrastive_deadline", "Policy: deadline (3-level Score)"), ("emotion", "Emotion, 6-way")]
 MODELS = [("kev-0.8b", "runs/r15-08b/00-trial-0/result.json"), ("kev-4b", "runs/r10-skills/00-trial-0/result.json"),
-          ("kev-9b", "runs/night2-9b-du/00-trial-0/result.json"), ("kev-27b", "runs/r23-27b-k-w85-transfer4/report.json")]   # Kev-27B v2: round 23's raw transfer-v4 read
+          ("kev-9b", "runs/r18-9b/00-trial-0/result.json"), ("kev-27b", "runs/r23-27b-k-w85-transfer4/report.json")]   # Kev-27B v2: round 23's raw transfer-v4 read
 JEV_PATH = "runs/jev-transfer-v4/report.json"
 
 

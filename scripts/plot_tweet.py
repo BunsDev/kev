@@ -18,13 +18,13 @@ from chartstyle import JEV, KEV, body, display, heading, hbars, rule, stat, use_
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = [("kev-27b", "Qwen3.8-27B", "runs/r23-27b-k-w85-transfer4/report.json"),   # Kev-27B v2: round 23's raw transfer-v4 read
-          ("kev-9b", "Qwen3.5-9B", "runs/night2-9b-du/00-trial-0/result.json"),
+          ("kev-9b", "Qwen3.5-9B", "runs/r18-9b/00-trial-0/result.json"),
           ("kev-4b", "Qwen3.5-4B", "runs/r10-skills/00-trial-0/result.json"),
           ("kev-0.8b", "Qwen3.5-0.8B", "runs/r15-08b/00-trial-0/result.json")]
 BASES = [("Qwen3.5-9B", "untrained base", "runs/probes/qwen35-9b-base-base-transfer-v4/report.json"),
          ("Qwen3.5-4B instruct", "untrained, SemIf prompt", "runs/probes/qwen35-4b-semif-transfer-v4/report.json")]
 LOCKED = [("kev-27b", "runs/locked/kev-27b-r23-ungated/summary.json"),
-          ("kev-9b", "runs/locked/kev-9b-night2-du-ungated/summary.json"),
+          ("kev-9b", "runs/locked/kev-9b-r27-ungated/summary.json"),
           ("kev-4b", "runs/locked/kev-4b-r10-ungated/summary.json"),
           ("kev-0.8b", "runs/locked/kev-08b-r15-ungated/summary.json")]
 JEV_T = "runs/jev-transfer-v4/report.json"

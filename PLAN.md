@@ -2606,20 +2606,23 @@ test pooled +18.7 [+16.7, +20.8] (hard-v1 +25.0, devtools-v1 +9.9 with the audit
 family reads of `jaredpalmer/kev-9b@2629c06a` (`runs/r27c-9b-parent-*`). Infrastructure: the spec's `app` is `kev-r27`
 (the registered `kev` named no deployed app, and the first locked launch failed before reading anything).
 
-## Release candidate: Kev-9B v2 (staged, not published)
+## Released: Kev-9B v2 (2026-09-30)
 
-- `/runs/r18-9b/00-trial-0/checkpoint` copied to `/runs/release/kev-9b-r27/checkpoint` (`modal_app.py::release_copy`;
-  adapter sha256 `2b2a70cf…` equal). `head.pt` T set to the round's pool fit, 2.193649959389252, by
-  `scripts/calibrate_checkpoint.py --temperature ... --reason ...` (it cannot list round15/joint's sources to refit; the
-  pool was checked against the arm's `trained_on` by `kev.rounds validate`), put back on the volume (`8e1dab2c…`). A read
-  of the staged copy on semif-v1 (`runs/rel9-staged-semif`) reproduces round 18's rows at T 2.19 (0 flips; logits equal
-  to the raw ones over T).
-- Numbers: `experiments/releases/kev-9b-r27.json` → `runs/release/kev-9b-r27.json`; card `docs/model-cards/kev-9b-v2.md`.
-  Whole suites against the released Kev-9B: hard-v1 test 0.584 → 0.834, devtools-v1 test 0.637 → 0.791, documents-v1
-  test 0.829 → 0.900, documents-v2 0.821 → 0.900; breadth-v1 test 0.692 → 0.698 (index 40.0 → 41.0), transfer-v4 dev,
-  transfer-r3 test and the locked test level; MMLU-Pro 0.515 → 0.590.
-- Not done, awaiting Jared's OK: the Hub upload (tag the current `jaredpalmer/kev-9b` main first, as `v1`), the README
-  and `docs/model-cards/kev-9b.md` swap, and `kev-deploy` / `kev-finetune`'s pins.
+- Hub: v1 (`2629c06a`) tagged `v1` first; v2 uploaded from `/runs/release/kev-9b-r27/checkpoint` by
+  `modal_app.py::release_publish --public --confirm-public jaredpalmer/kev-9b --replace` in one commit (`b5d8c18e`): adapter
+  sha256 `2b2a70cf…`, `head.pt` `8e1dab2c…` (T 2.1936); the card is `docs/model-cards/kev-9b.md`. `--replace` dropped v1's
+  `train.log`, which stays at the tag.
+- The staged copy: `modal_app.py::release_copy` from `/runs/r18-9b/00-trial-0/checkpoint` (adapter hash equal); `head.pt` T
+  set to the round's pool fit by `scripts/calibrate_checkpoint.py --temperature ... --reason ...` (it cannot list round15/joint's
+  sources to refit; `kev.rounds validate` had checked the pool against the arm's `trained_on`).
+- Verification (`modal_app.py::release_verify`, fresh HF cache, no token; `runs/rel9-public/`, `scripts/compare_release_rows.py`):
+  semif-v1 252 of 252 rows and transfer-v4 development 764 of 764 with argmax equal to round 18's raw reads at T 2.19
+  (max |Δp| 0.0014 and 0.0015; not bit-exact against reads made in-trial on another GPU); `@v1` loads v1 at T 2.30 and
+  reproduces its served semif-v1 read (max |Δp| 0.0008, 0 flips).
+- Numbers: `experiments/releases/kev-9b-r27.json` → `runs/release/kev-9b-r27.json`; README Models row, calibration and
+  limits text, figures (`scripts/plot_family.py`, `scripts/plot_tweet.py`), AGENTS.md, claims (901 verified). GitHub release
+  `kev-family`: `kev-9b.tar.gz` rebuilt from the Hub commit (+ `locked_test.json`), `SHA256SUMS.txt` regenerated.
+- The kev-deploy / kev-finetune `KEV_REF` pins are unchanged: v2 is an adapter of the same shape, served by the same code.
 
 ## Next
 
@@ -2725,6 +2728,7 @@ outcomes.
 | Round 26 | 09-29 | round 25's lr 1e-6 arm with tasksource-v1 doubled (`sft-v2-r26`: sft-v2-r25 + 13,000 tasksource-v1 records, 58,515), one study, 4 candidates, round 24's rule | no candidate (0 of 4): every arm fails breadth ECE (0.020-0.029 vs 0.0176); the final fails only that (11/12), the snapshots also the breadth primary, s50 also short-state accuracy; against round 25's lr 1e-6 arm breadth and breadth ECE level (report only); none ahead of `27b-k-w85` (report only) | `r26.json`; `runs/r26-readout`; "Round 26 result" |
 | WANLI and TypeSafe removed | 09-30 | `evals/external/{wanli-v2, wanli-v1, typesafe-v1}` removed as unsound for a gate (a quarter of WANLI's gold labels are one of two disagreeing annotators'; TypeSafe's gold is two closed frontier models' averaged answer, split-half r about 0) | past verdicts stand; SemIf is the only external read from round 27, report only | "WANLI and TypeSafe removed"; `kev.suite.REMOVED_SUITES` |
 | Round 27 | 09-30 | post-hoc, no training: round 18's two 9B documents + skills deltas on the audited rule at a held-out-pool temperature | **`9b-r18a` confirmed** (both arms pass; tests: pooled +18.7, documents-v1 +7.1; locked transfer-v4 +0.0 [−1.7, +1.8], Brier −0.025); staged as Kev-9B v2, not published | `r27.json`; "Round 27 result"; `runs/r27-readout`, `runs/r27-verdict` |
+| Release: Kev-9B v2 | 09-30 | round 27's `9b-r18a` published to `jaredpalmer/kev-9b` main (`b5d8c18e`, adapter `2b2a70cf…`, T 2.19); v1 tagged `v1` first | **released**; anonymous Hub load reproduces round 18's reads (argmax 252/252, 764/764); `@v1` loads v1 at T 2.30 | "Released: Kev-9B v2"; `runs/rel9-public/` |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |
 | drift-v1 | 09-30 | why Kev-27B v1's semif-v1 logits differ between its 09-23 read and the 09-30 public read (max \|Δp\| 0.032, argmax equal) | report: #125's causal-conv1d CUDA kernel in the Modal image (replacing transformers' PyTorch conv in the 48 DeltaNet layers); no code drift (09-23 code and `main` bit-identical on the same kernels), no nondeterminism; breadth-v1 offset acc −0.1 pp, ECE +0.0008, 13/3,075 flips, below every round-25/26 margin; fp32 Qwen3.5 reads on CUDA carry fla's TF32 dots (≈ 0.003 in p) | `runs/drift-v1/REPORT.md`; AGENTS.md "What fp32-exact guarantees" |
 

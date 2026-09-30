@@ -3,7 +3,6 @@
     "printed": "0.845",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -17,7 +16,6 @@
     "printed": "0.857",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -31,7 +29,6 @@
     "printed": "0.211",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -45,7 +42,6 @@
     "printed": "3.7%",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -59,7 +55,6 @@
   {
     "printed": "0.049",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -157,7 +152,6 @@
   {
     "printed": "0.872",
     "in": [
-      "README.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -246,8 +240,6 @@
   {
     "printed": "0.872",
     "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
     "source": "runs/leaderboard.jsonl",
@@ -262,7 +254,6 @@
   {
     "printed": "0.822",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
@@ -278,8 +269,6 @@
   {
     "printed": "0.286",
     "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
     "source": "runs/leaderboard.jsonl",
@@ -294,8 +283,6 @@
   {
     "printed": "8.7%",
     "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
     "source": "runs/leaderboard.jsonl",
@@ -335,101 +322,6 @@
     },
     "path": [
       "none_present"
-    ]
-  },
-  {
-    "printed": "0.876",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/leaderboard.jsonl",
-    "select": {
-      "study": "q35-9b",
-      "trial": "01-trial-1"
-    },
-    "path": [
-      "dev_acc"
-    ]
-  },
-  {
-    "printed": "0.812",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/leaderboard.jsonl",
-    "select": {
-      "study": "q35-9b",
-      "trial": "01-trial-1"
-    },
-    "path": [
-      "transfer_acc"
-    ]
-  },
-  {
-    "printed": "0.291",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/leaderboard.jsonl",
-    "select": {
-      "study": "q35-9b",
-      "trial": "01-trial-1"
-    },
-    "path": [
-      "transfer_brier"
-    ]
-  },
-  {
-    "printed": "7.5%",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/leaderboard.jsonl",
-    "select": {
-      "study": "q35-9b",
-      "trial": "01-trial-1"
-    },
-    "path": [
-      "transfer_conf_err"
-    ],
-    "scale": 100
-  },
-  {
-    "printed": "0.80",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/leaderboard.jsonl",
-    "select": {
-      "study": "q35-9b",
-      "trial": "01-trial-1"
-    },
-    "path": [
-      "heldout_pairs"
-    ]
-  },
-  {
-    "printed": "0.105",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/q35-9b/01-trial-1/result.json",
-    "path": [
-      "transfer",
-      "clean",
-      "ece"
-    ]
-  },
-  {
-    "printed": "0.53",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/q35-9b/01-trial-1/result.json",
-    "path": [
-      "transfer",
-      "clean",
-      "coverage_at_5pct_error"
     ]
   },
   {
@@ -531,7 +423,6 @@
     "printed": "0.863",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-8b-qwen3.md"
     ],
     "source": "runs/leaderboard.jsonl",
@@ -547,7 +438,6 @@
     "printed": "0.796",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-8b-qwen3.md"
     ],
     "source": "runs/leaderboard.jsonl",
@@ -576,7 +466,6 @@
   {
     "printed": "9.9%",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-8b-qwen3.md"
     ],
     "source": "runs/leaderboard.jsonl",
@@ -602,18 +491,6 @@
     },
     "path": [
       "heldout_pairs"
-    ]
-  },
-  {
-    "printed": "0.121",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/v7-final/00-trial-0/result.json",
-    "path": [
-      "transfer",
-      "clean",
-      "ece"
     ]
   },
   {
@@ -886,8 +763,7 @@
   {
     "printed": "0.874",
     "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
+      "README.md"
     ],
     "source": "runs/locked/kev-9b-night2-du-ungated/summary.json",
     "path": [
@@ -912,20 +788,6 @@
     ]
   },
   {
-    "printed": "0.237",
-    "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/locked/kev-9b-night2-du-ungated/summary.json",
-    "path": [
-      "suites",
-      "transfer",
-      "clean",
-      "brier"
-    ]
-  },
-  {
     "printed": "0.62",
     "in": [
       "docs/model-cards/kev-9b.md"
@@ -936,20 +798,6 @@
       "transfer",
       "clean",
       "coverage_at_5pct_error"
-    ]
-  },
-  {
-    "printed": "0.88",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/locked/kev-9b-night2-du-ungated/summary.json",
-    "path": [
-      "suites",
-      "transfer",
-      "tasks",
-      "contrastive_deadline",
-      "acc"
     ]
   },
   {
@@ -1095,59 +943,6 @@
       "transfer",
       "paired_flip",
       "both_correct_rate"
-    ]
-  },
-  {
-    "printed": "0.837",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/locked/kev-9b-q35/summary.json",
-    "path": [
-      "suites",
-      "transfer",
-      "clean",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.243",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/locked/kev-9b-q35/summary.json",
-    "path": [
-      "suites",
-      "transfer",
-      "clean",
-      "brier"
-    ]
-  },
-  {
-    "printed": "0.66",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/locked/kev-9b-q35/summary.json",
-    "path": [
-      "suites",
-      "transfer",
-      "clean",
-      "coverage_at_5pct_error"
-    ]
-  },
-  {
-    "printed": "0.72",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/locked/kev-9b-q35/summary.json",
-    "path": [
-      "suites",
-      "transfer",
-      "tasks",
-      "contrastive_deadline",
-      "acc"
     ]
   },
   {
@@ -1349,22 +1144,8 @@
     ]
   },
   {
-    "printed": "0.106",
-    "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/night2-9b-du/00-trial-0/result.json",
-    "path": [
-      "transfer",
-      "clean",
-      "ece"
-    ]
-  },
-  {
     "printed": "0.042",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/night2-9b-du/00-trial-0/result.json",
@@ -1373,34 +1154,6 @@
       "calibrated_clean",
       "ece"
     ]
-  },
-  {
-    "printed": "8.7%",
-    "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/night2-9b-du/00-trial-0/result.json",
-    "path": [
-      "transfer",
-      "clean",
-      "confident_error_rate"
-    ],
-    "scale": 100
-  },
-  {
-    "printed": "4.0%",
-    "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/night2-9b-du/00-trial-0/result.json",
-    "path": [
-      "transfer",
-      "calibrated_clean",
-      "confident_error_rate"
-    ],
-    "scale": 100
   },
   {
     "printed": "0.264",
@@ -1417,26 +1170,12 @@
   {
     "printed": "0.47",
     "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
+      "README.md"
     ],
     "source": "runs/night2-9b-du/00-trial-0/result.json",
     "path": [
       "transfer",
       "clean",
-      "coverage_at_5pct_error"
-    ]
-  },
-  {
-    "printed": "0.45",
-    "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/night2-9b-du/00-trial-0/result.json",
-    "path": [
-      "transfer",
-      "calibrated_clean",
       "coverage_at_5pct_error"
     ]
   },
@@ -1530,8 +1269,7 @@
     "printed": "2.30",
     "in": [
       "AGENTS.md",
-      "docs/model-cards/kev-9b.md",
-      "README.md"
+      "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/calibration-audit-v1/report.json",
     "path": [
@@ -1595,21 +1333,6 @@
     ]
   },
   {
-    "printed": "4.0%",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/calibration-audit-v1/report.json",
-    "path": [
-      "models",
-      "Kev-9B",
-      "temperature_replay",
-      "micro",
-      "confident_error_rate"
-    ],
-    "scale": 100
-  },
-  {
     "printed": "2.6%",
     "in": [
       "docs/model-cards/kev-4b.md"
@@ -1638,20 +1361,6 @@
       "confident_error_rate"
     ],
     "scale": 100
-  },
-  {
-    "printed": "0.45",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/calibration-audit-v1/report.json",
-    "path": [
-      "models",
-      "Kev-9B",
-      "temperature_replay",
-      "micro",
-      "coverage_at_5pct_error"
-    ]
   },
   {
     "printed": "0.57",
@@ -1726,7 +1435,6 @@
     "printed": "9%",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-transfer-v9/report.json",
@@ -1756,17 +1464,6 @@
     "path": [
       "unknowable",
       "share_at_0_9"
-    ]
-  },
-  {
-    "printed": "0.95",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "unknowable",
-      "control_share_at_0_9"
     ]
   },
   {
@@ -1807,23 +1504,10 @@
   {
     "printed": "0.840",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md",
       "docs/model-cards/kev-0.8b.md"
     ],
     "source": "runs/jev-transfer-v9/report.json",
-    "path": [
-      "tasks",
-      "mmlu_pro",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.545",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/q35-9b-s1-transfer-v9/report.json",
     "path": [
       "tasks",
       "mmlu_pro",
@@ -1892,17 +1576,6 @@
     ]
   },
   {
-    "printed": "0.828",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v4df/report.json",
-    "path": [
-      "clean",
-      "acc"
-    ]
-  },
-  {
     "printed": "0.90",
     "in": [
       "README.md",
@@ -1918,8 +1591,7 @@
   {
     "printed": "0.80",
     "in": [
-      "README.md",
-      "docs/model-cards/kev-9b.md"
+      "README.md"
     ],
     "source": "runs/n2-9b-du-v9/report.json",
     "path": [
@@ -1967,7 +1639,6 @@
     "printed": "0.93",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-transfer-v4/report.json",
@@ -1994,7 +1665,6 @@
     "printed": "0.965",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-semif-v1/report.json",
@@ -2029,29 +1699,6 @@
     ]
   },
   {
-    "printed": "0.952",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/q35-9b-s1-scienthoon-v1/report.json",
-    "path": [
-      "tasks",
-      "scienthoon_queue",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.082",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/q35-9b-s1-scienthoon-v1/report.json",
-    "path": [
-      "clean",
-      "ece"
-    ]
-  },
-  {
     "printed": "0.086",
     "in": [
       "docs/model-cards/kev-4b.md"
@@ -2072,17 +1719,6 @@
       "tasks",
       "scienthoon_angry",
       "acc"
-    ]
-  },
-  {
-    "printed": "0.113",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-sci/report.json",
-    "path": [
-      "clean",
-      "ece"
     ]
   },
   {
@@ -2123,7 +1759,6 @@
   {
     "printed": "0.897",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-scienthoon-v1/report.json",
@@ -2136,7 +1771,6 @@
   {
     "printed": "0.914",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-scienthoon-v1/report.json",
@@ -2149,7 +1783,6 @@
   {
     "printed": "0.105",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-scienthoon-v1/report.json",
@@ -2161,7 +1794,6 @@
   {
     "printed": "1,204",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "evals/v7/decision-v7/manifest.json",
@@ -2174,7 +1806,6 @@
   {
     "printed": "764",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "evals/v4/transfer-v4/manifest.json",
@@ -2182,54 +1813,6 @@
       "files",
       "development.jsonl",
       "records"
-    ]
-  },
-  {
-    "printed": "0.93",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "tasks",
-      "qnli",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.96",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "tasks",
-      "sciq",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.78",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "tasks",
-      "tweet_offensive",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.76",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "tasks",
-      "paws",
-      "acc"
     ]
   },
   {
@@ -2245,18 +1828,6 @@
     ]
   },
   {
-    "printed": "0.60",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "tasks",
-      "emotion",
-      "acc"
-    ]
-  },
-  {
     "printed": "0.91",
     "in": [
       "docs/model-cards/kev-9b.md"
@@ -2265,18 +1836,6 @@
     "path": [
       "tasks",
       "composition_held_and_or",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.88",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/n2-9b-du-v9/report.json",
-    "path": [
-      "tasks",
-      "composition_held_or_not",
       "acc"
     ]
   },
@@ -2296,7 +1855,6 @@
     "printed": "0.93",
     "in": [
       "README.md",
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-transfer-v4/report.json",
@@ -2309,7 +1867,6 @@
   {
     "printed": "0.99",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-transfer-v4/report.json",
@@ -2388,7 +1945,6 @@
   {
     "printed": "0.97",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-transfer-v4/report.json",
@@ -2401,7 +1957,6 @@
   {
     "printed": "0.78",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-transfer-v4/report.json",
@@ -2532,18 +2087,6 @@
     ]
   },
   {
-    "printed": "0.511",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-ekzhang-mmlupro-2/report.json",
-    "path": [
-      "clean",
-      "acc"
-    ],
-    "derive": "over_requested"
-  },
-  {
     "printed": "0.468",
     "in": [
       "docs/model-cards/kev-4b.md"
@@ -2614,7 +2157,6 @@
   {
     "printed": "0.835",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-ekzhang-mmlupro-v1/report.json",
@@ -2627,21 +2169,9 @@
   {
     "printed": "0.758",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-wanli-v1/report.json",
-    "path": [
-      "clean",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.703",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-wanli-v1/report.json",
     "path": [
       "clean",
       "acc"
@@ -2656,58 +2186,6 @@
     "path": [
       "clean",
       "acc"
-    ]
-  },
-  {
-    "printed": "0.809",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/kev-9b-typesafe-v1",
-      "evaluated",
-      "equal_case_modal_agreement"
-    ]
-  },
-  {
-    "printed": "0.226",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/kev-9b-typesafe-v1",
-      "evaluated",
-      "equal_case_total_variation"
-    ]
-  },
-  {
-    "printed": "0.728",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/kev-9b-typesafe-v1",
-      "all_rows",
-      "equal_case_modal_agreement"
-    ]
-  },
-  {
-    "printed": "0.304",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/kev-9b-typesafe-v1",
-      "all_rows",
-      "equal_case_total_variation"
     ]
   },
   {
@@ -2786,17 +2264,6 @@
     ]
   },
   {
-    "printed": "0.29",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-typesafe-v1/report.json",
-    "path": [
-      "clean",
-      "coverage_at_5pct_error"
-    ]
-  },
-  {
     "printed": "0.02",
     "in": [
       "docs/model-cards/kev-4b.md"
@@ -2810,7 +2277,6 @@
   {
     "printed": "0.892",
     "in": [
-      "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/jev-typesafe-v1/report.json",
@@ -2911,64 +2377,6 @@
       "accuracy_by_state_tokens",
       "0-384",
       "rows"
-    ]
-  },
-  {
-    "printed": "0.131",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-wanli-v1/calibration.json",
-    "path": [
-      "arms",
-      "shipped",
-      "ece"
-    ]
-  },
-  {
-    "printed": "0.037",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-wanli-v1/calibration.json",
-    "path": [
-      "arms",
-      "workload_oof",
-      "ece"
-    ]
-  },
-  {
-    "printed": "3.56",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-wanli-v1/calibration.json",
-    "path": [
-      "workload_temperature"
-    ]
-  },
-  {
-    "printed": "0.074",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-typesafe-v1/calibration.json",
-    "path": [
-      "arms",
-      "shipped",
-      "ece"
-    ]
-  },
-  {
-    "printed": "0.092",
-    "in": [
-      "docs/model-cards/kev-9b.md"
-    ],
-    "source": "runs/kev-9b-typesafe-v1/calibration.json",
-    "path": [
-      "arms",
-      "workload_oof",
-      "ece"
     ]
   },
   {
@@ -7945,19 +7353,6 @@
     ]
   },
   {
-    "printed": "0.74",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/night2-9b-du/00-trial-0/result.json",
-    "path": [
-      "transfer",
-      "tasks",
-      "mmlu",
-      "acc"
-    ]
-  },
-  {
     "printed": "44.2",
     "in": [
       "README.md"
@@ -11350,5 +10745,825 @@
       "bytes"
     ],
     "scale": 1e-09
+  },
+  {
+    "printed": "0.852",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.852",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.199",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.224",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.034",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.042",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "ece"
+    ]
+  },
+  {
+    "printed": "1.4",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "confident_error_rate"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "3.2",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "confident_error_rate"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.742",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "coverage_at_5pct_error"
+    ]
+  },
+  {
+    "printed": "0.645",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "coverage_at_5pct_error"
+    ]
+  },
+  {
+    "printed": "0.834",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "hard_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.584",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "hard_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.791",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "devtools_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.637",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "devtools_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.900",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "docs1_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.829",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "docs1_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.900",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "docs2",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.821",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "docs2",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.698",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "breadth_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.692",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "breadth_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.700",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "breadth_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.697",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "breadth_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.820",
+    "in": [
+      "docs/model-cards/kev-9b.md",
+      "README.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "transfer_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.822",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "transfer_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.262",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "transfer_dev",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.264",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "transfer_dev",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.847",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "r3test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.847",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "r3test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.590",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "mmlu_pro"
+    ]
+  },
+  {
+    "printed": "0.515",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "mmlu_pro"
+    ]
+  },
+  {
+    "printed": "0.917",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "semif",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.910",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "semif",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.813",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "hard_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.574",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "hard_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.772",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "devtools_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.631",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "devtools_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.902",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "docs1_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.833",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "docs1_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.044",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "breadth_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.054",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "hard_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.075",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "hard_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.098",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "devtools_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.147",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "devtools_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.017",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "docs1_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.103",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "docs1_test",
+      "ece"
+    ]
+  },
+  {
+    "printed": "2.19",
+    "in": [
+      "docs/model-cards/kev-9b.md",
+      "README.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "temperature"
+    ]
+  },
+  {
+    "printed": "2.1936",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "temperature"
+    ]
+  },
+  {
+    "printed": "2.30",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "parent",
+      "temperature"
+    ]
+  },
+  {
+    "printed": "0.822",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-verdict/9b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.635",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-verdict/9b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.821",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "primary",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.628",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "primary",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.871",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "short",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.197",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "short",
+      "brier",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "2.3",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "short",
+      "confident_error_rate",
+      "candidate"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "3.7",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "short",
+      "confident_error_rate",
+      "parent"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.050",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "hard",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.073",
+    "in": [
+      "docs/model-cards/kev-9b.md"
+    ],
+    "source": "runs/r27-readout/round27.json",
+    "path": [
+      "arms",
+      "9b-r18a",
+      "panels",
+      "hard",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.874",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/r18-9b/00-trial-0/result.json",
+    "path": [
+      "clean",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.289",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/r18-9b/00-trial-0/result.json",
+    "path": [
+      "transfer",
+      "clean",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.217",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/locked/kev-9b-r27-ungated/summary.json",
+    "path": [
+      "suites",
+      "transfer",
+      "clean",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.103",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/r18-9b/00-trial-0/result.json",
+    "path": [
+      "transfer",
+      "clean",
+      "ece"
+    ]
+  },
+  {
+    "printed": "8.2%",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/r18-9b/00-trial-0/result.json",
+    "path": [
+      "transfer",
+      "clean",
+      "confident_error_rate"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.041",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "transfer_dev",
+      "ece"
+    ]
+  },
+  {
+    "printed": "2.4%",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "transfer_dev",
+      "confident_error_rate"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.59",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/release/kev-9b-r27.json",
+    "path": [
+      "candidate",
+      "mmlu_pro"
+    ]
   }
 ]

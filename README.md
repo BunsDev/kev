@@ -30,7 +30,7 @@ Start with Kev-4B. Move to Kev-9B if you have a bigger GPU, or to Kev-27B if you
 |---|---|---|---|---|---|---|
 | [Kev-0.8B](https://huggingface.co/jaredpalmer/kev-0.8b) | Qwen3.5-0.8B-Base | 0.648 / 0.697 | 0.827 / 0.838 | 0.481 / 0.416 | Any Apple Silicon Mac, L4 | [Details](docs/model-cards/kev-0.8b.md) |
 | [Kev-4B](https://huggingface.co/jaredpalmer/kev-4b) | Qwen3.5-4B-Base | 0.817 / 0.838 | 0.873 / 0.865 | 0.269 / 0.242 | 32 GB Mac, L40S, H100 | [Details](docs/model-cards/kev-4b.md) |
-| [Kev-9B](https://huggingface.co/jaredpalmer/kev-9b) | Qwen3.5-9B-Base | 0.822 / 0.852 | 0.872 / 0.874 | 0.286 / 0.237 | 32 GB Mac, L40S, H100 | [Details](docs/model-cards/kev-9b.md) |
+| [Kev-9B](https://huggingface.co/jaredpalmer/kev-9b) | Qwen3.5-9B-Base | 0.820 / 0.852 | 0.874 / 0.873 | 0.289 / 0.217 | 32 GB Mac, L40S, H100 | [Details](docs/model-cards/kev-9b.md) |
 | [Kev-27B](https://huggingface.co/jaredpalmer/kev-27b) | Qwen3.8-27B (post-trained) | **0.851 / 0.889** | 0.865 / 0.866 | **0.225 / 0.156** | B200, H200, H100 80 GB | [Details](docs/model-cards/kev-27b.md) |
 | Jev | Hosted | 0.857 / – | 0.845 / – | 0.211 / – | TypeSafe's API | – |
 
@@ -185,15 +185,15 @@ A model you fine-tuned with the `kev-finetune` skill deploys the same way from i
 
 ## What to Expect
 
-**Accuracy.** Kev-27B is within three points of Jev, or ahead of it, on 9 of the 11 new-source categories in the chart below. Kev-4B and Kev-9B are about as close on classification-shaped sources like routing, entailment and science questions. Knowledge questions depend mostly on the base model: on MMLU Kev-9B scores 0.74 and Kev-27B matches Jev at 0.90, but on the harder MMLU-Pro Kev-27B scores 0.675 against Jev's 0.840. The smaller models also trail on day-precision date arithmetic.
+**Accuracy.** Kev-27B is within three points of Jev, or ahead of it, on 9 of the 11 new-source categories in the chart below. Kev-4B and Kev-9B are about as close on classification-shaped sources like routing, entailment and science questions. Knowledge questions depend mostly on the base model: on MMLU Kev-9B scores 0.73 and Kev-27B matches Jev at 0.90, but on the harder MMLU-Pro Kev-27B scores 0.675 against Jev's 0.840. The smaller models also trail on day-precision date arithmetic.
 
 ![Accuracy by source for Kev and Jev](docs/kev-family.png)
 
-**Confidence.** Each checkpoint ships with a fitted temperature, so its probabilities are calibrated by default. As served, Kev-9B puts at least 0.9 probability on a wrong answer for 4.0% of new-source questions, against Jev's 3.7%. Jev still ranks its answers better: at a 5% error budget, Kev can automate 0.45–0.57 of decisions and Jev 0.70. Check a threshold on your own data before you rely on it.
+**Confidence.** Each checkpoint ships with a fitted temperature, so its probabilities are calibrated by default. As served, Kev-9B puts at least 0.9 probability on a wrong answer for 2.4% of new-source questions, against Jev's 3.7%. Jev still ranks its answers better: at a 5% error budget, Kev-4B, 9B and 27B can automate 0.52–0.69 of new-source decisions, Kev-0.8B 0.14 and Jev 0.70. Check a threshold on your own data before you rely on it.
 
 **Speed.** Kev-4B answers six questions about a new short text in 18.1 ms of model time on an H100 and 41.5 ms on an L40S, and a container serves around 101 requests per second on an H100. On an Apple M5, Kev-4B takes 721 ms for five questions, or 136 ms when the text repeats and comes from the cache. [Serving Performance](#serving-performance) has every GPU and batch size.
 
-**Length.** Kev-0.8B, 4B and 9B trained on states of up to 384 tokens, Kev-27B on states of up to 32,768. The server accepts states of up to 65,536 tokens, and 8,192 more for each question. Longer inputs work, but the smaller models lose accuracy on long documents. On real contracts of up to 64k tokens (CUAD) Kev-27B scores 0.874, and its confidence there is less reliable than on short text; its [model card](docs/model-cards/kev-27b.md) has the numbers by length.
+**Length.** Kev-0.8B, 4B and 9B trained mostly on states of up to 384 tokens, with longer ones in their document and skill fine-tunes (up to 7,552 tokens for Kev-9B), Kev-27B on states of up to 32,768. The server accepts states of up to 65,536 tokens, and 8,192 more for each question. Longer inputs work, but the smaller models lose accuracy on long documents. On real contracts of up to 64k tokens (CUAD) Kev-27B scores 0.874, and its confidence there is less reliable than on short text; its [model card](docs/model-cards/kev-27b.md) has the numbers by length.
 
 ## Playground
 
@@ -283,7 +283,7 @@ Asking questions together or separately produces probabilities within 4e-6 in th
 
 The released models share one base training set, `decision-v7`: 10,000 examples from ten public datasets, 896 generated policy examples, and 1,680 examples from 60 generated rule structures. Kev-0.8B, 4B and 9B train on it for two epochs with LoRA rank 16 and cross-entropy. The learning rate is `1e-4` for 0.8B and `5e-5` for 4B and 9B. On these hybrid bases the adapter covers the attention, MLP and DeltaNet projections; `kev.train` picks the right targets from the model config.
 
-Kev-0.8B, 4B and 9B then get short follow-up fine-tunes from their released checkpoints, through the same `--init_from` path you'd use for your own data: generated cases that state day counts or have the deciding evidence removed (all three), then real documents and generated skill data (4B and 0.8B). Kev-27B is trained differently. Every weight of the base is fine-tuned for one epoch on eight H200s (`--full_ft 1`, learning rate `2e-6`) on a 145,840-record corpus: Kev's own data, the document, skill and developer-tooling suites, public datasets, licensed task families and generated long-document, tool-routing, agent-log and guardrail records, with states of up to 32,768 tokens. The result is then averaged with the earlier adapter-trained Kev-27B, 0.85 to 0.15. The model cards list every stage with its data and cost.
+Kev-0.8B, 4B and 9B then get short follow-up fine-tunes from their released checkpoints, through the same `--init_from` path you'd use for your own data: generated cases that state day counts or have the deciding evidence removed (all three), then real documents and generated skill data (all three; Kev-9B since v2, 2026-09-30). Kev-27B is trained differently. Every weight of the base is fine-tuned for one epoch on eight H200s (`--full_ft 1`, learning rate `2e-6`) on a 145,840-record corpus: Kev's own data, the document, skill and developer-tooling suites, public datasets, licensed task families and generated long-document, tool-routing, agent-log and guardrail records, with states of up to 32,768 tokens. The result is then averaged with the earlier adapter-trained Kev-27B, 0.85 to 0.15. The model cards list every stage with its data and cost.
 
 ```bash
 # sanity run, ~1 minute
@@ -340,7 +340,7 @@ uv run python -m kev.benchmark --remote http://127.0.0.1:8009 --suite evals/v4/t
 
 These commands use development data. Test data requires `--allow-test`. The benchmark reports accuracy, Brier score, calibration error, the share of decisions you could automate at a 5% error budget, option-order changes, and question isolation. On the unknowable records it reports how often the model still answers with at least 0.9 confidence (Kev-9B 0%, Jev 9%). Published accuracy numbers use fp32 evaluation, not the bf16 serving path. `kev.jev` runs the same questions against Jev through Vercel AI Gateway, and `kev.compare` compares two saved runs with paired bootstrap confidence intervals.
 
-**Calibration.** Each checkpoint stores a temperature, and the pointer head applies it when the model is loaded. Kev-9B (2.30), Kev-4B (2.41) and Kev-0.8B (2.35) fitted theirs on their in-distribution development sets; Kev-27B (1.32) fitted its own on held-out datasets it never trained on. It never changes which answer wins. On new sources it takes Kev-9B's calibration error from 0.106 to 0.042 and its confident errors (wrong answers with probability ≥ 0.9) from 8.7% to 4.0%, about Jev's 3.7%. The accuracy numbers above are the same either way; the Brier numbers are for the raw probabilities. `scripts/calibrate_checkpoint.py` also reports an out-of-fold estimate, so the in-sample fit can be checked against records it didn't see.
+**Calibration.** Each checkpoint stores a temperature, and the pointer head applies it when the model is loaded. Kev-4B (2.41) and Kev-0.8B (2.35) fitted theirs on their in-distribution development sets; Kev-27B (1.32) and Kev-9B (2.19) fitted theirs on held-out datasets they never trained on. It never changes which answer wins. On new sources it takes Kev-9B's calibration error from 0.103 to 0.041 and its confident errors (wrong answers with probability ≥ 0.9) from 8.2% to 2.4%, below Jev's 3.7%. The accuracy numbers above are the same either way; the Brier numbers are for the raw probabilities. `scripts/calibrate_checkpoint.py` also reports an out-of-fold estimate, so the in-sample fit can be checked against records it didn't see.
 
 **Dates.** Kev can't subtract dates reliably, but it can use a day count it's given. `KEV_DATE_FACTS=1` appends one sentence per pair of dates in the state ("June 26, 2026 is 8 days before July 4, 2026"). On the deadline policy questions this takes Kev-9B from 0.80 to 0.90 (Jev 0.93). None of the tables use it.
 
@@ -382,11 +382,11 @@ The server runs in bf16 on GPUs and Macs. Its probabilities differ from the fp32
 
 ## Limitations
 
-- Calibration is a single temperature fitted in distribution. It can't reorder confidences, so the share of decisions you can automate at a 5% error budget (0.45–0.57) is still below Jev's 0.70. Test a probability threshold on your own data before you rely on it.
-- Knowledge questions are set by the base model. MMLU is 0.74 for Kev-9B against Jev's 0.90, and MMLU-Pro 0.52 against 0.84.
+- Calibration is a single temperature. It can't reorder confidences, so the share of new-source decisions you can automate at a 5% error budget (0.52–0.69 for Kev-4B, 9B and 27B) is still below Jev's 0.70. Test a probability threshold on your own data before you rely on it.
+- Knowledge questions are set by the base model. MMLU is 0.73 for Kev-9B against Jev's 0.90, and MMLU-Pro 0.59 against 0.84.
 - Fine-tuning can make the base model worse at individual tasks. Date arithmetic was the clearest case ([issue #8](https://github.com/jaredpalmer/kev/issues/8)); training on stated day counts plus `KEV_DATE_FACTS=1` recovers it.
 - Changing option order can change an answer. Question isolation doesn't prevent this.
-- Kev-0.8B, 4B and 9B trained on at most 384 state tokens and 1,024 tokens for the state plus one question, Kev-27B on states of up to 32,768 tokens. Serving allows a 65,536-token state; longer context wasn't covered by training.
+- Kev-0.8B, 4B and 9B trained mostly on at most 384 state tokens and 1,024 tokens for the state plus one question (their document and skill fine-tunes on longer states; up to 7,552 tokens for Kev-9B), Kev-27B on states of up to 32,768 tokens. Serving allows a 65,536-token state; longer context wasn't covered by training.
 - On a Mac, answers take hundreds of milliseconds, not tens. Kev-27B needs an 80 GB GPU and has no Mac path.
 - Kev-27B starts from a post-trained model whose training data we don't know.
 
