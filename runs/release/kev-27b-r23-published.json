@@ -58,9 +58,11 @@
       "library_name": "transformers"
     },
     "readme_commits": {
-      "0d7f9b497f825a765c419edbf790f20cbb226d14": "docs/model-cards/kev-27b.md with the verification line and the decision-v7 development read; weights unchanged since 28be62e9 (main)"
+      "0d7f9b497f825a765c419edbf790f20cbb226d14": "docs/model-cards/kev-27b.md with the verification line and the decision-v7 development read; weights unchanged since 28be62e9",
+      "058ffd47c9b4a0c0e6b8d151f26a715761a6d524": "docs/model-cards/kev-27b.md rewritten as a formal, standalone model card (2026-09-30; HfApi.upload_file of README.md only); weights unchanged since 28be62e9",
+      "b88afb6111ef39e97a63114095932c33591b0e4b": "the same card with the 2026-09-30 retirement of WANLI-v2 and TypeSafe noted (HfApi.upload_file of README.md only); weights unchanged since 28be62e9"
     },
-    "main": "0d7f9b497f825a765c419edbf790f20cbb226d14"
+    "main": "b88afb6111ef39e97a63114095932c33591b0e4b"
   },
   "verification": {
     "command": "KEV_APP_NAME=kev-release uv run modal run modal_app.py::release_verify --jobs 'jaredpalmer/kev-27b@evals/external/semif-v1,jaredpalmer/kev-27b@evals/v4/transfer-v4,jaredpalmer/kev-27b@evals/v7/decision-v7,jaredpalmer/kev-27b@v1-lora@evals/external/semif-v1' --out runs/rel27-public --gpu H200",
