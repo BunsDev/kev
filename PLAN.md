@@ -119,6 +119,12 @@ Evidence: `runs/release/kev-{27b-r23,27b-v2,4b-r10,08b-r15}.json` (`kev-27b-v2` 
   (weights commit `28be62e9`, card `0d7f9b49`); v1 is tag `v1-lora` ("Released: Kev-27B v2").
 - **documents-v1 and hard-v1 train partitions published** (2026-09-30): both are in `jaredpalmer/kev-suites` at
   `cc4bac80` (`SUITES_REVISION`), so Kev-4B's and Kev-0.8B's training data is fetchable (Next, item 3).
+- **Rounds 28 and 29 are registered and not read** (Kev 1.0 prep, no training). Round 28 refits Kev-4B's and Kev-0.8B's shipped
+  temperatures on the held-out-datasets pool and registers a validated-context-length rule per size. Round 29 is a
+  retrospective selection over the 11 9B deltas of rounds 7, 9, 11, 16 and 18 under round 24's audited rule, against the Kev-9B
+  they came from, with Kev-9B v2 (`9b-r18a`) as one of the arms. The sweep needs 68 reads now (≈ $40). 42 long reads (≈ $115)
+  are blocked: the small models' fp32 long-state reads ran out of memory at 32k (4B, 9B) and at 64k (0.8B). Round 29's CUAD
+  guard needs those long reads. See "Round 28 (registered)" and "Round 29 (registered)".
 - Decisions waiting on Jared: submit Kev-27B (and the new 4B / 0.8B) to the Decision Index.
 - Spend: Modal metered $4,558.69 at 2026-09-29T13:01Z after round 26's last read (+$104.88 over its launch reading of
   $4,453.81; the 11:17Z reading was $4,650.37, +$196.56, and was revised down by 12:56Z; night ceiling ≈ $5,980, hard stop
@@ -2687,6 +2693,251 @@ Goals and open questions, not registered rounds; each becomes a spec and a PLAN 
 4. **Decision Index submission** for Kev-27B and the current Kev-4B / Kev-0.8B.
 5. Smaller open items: rotation-averaged Choice met its round-4.4 gate (permutation flips 0.028 → 0.000 at 9B) and waits for
    a product decision (it multiplies latency); date arithmetic stays the weakest family at every size (finding 9).
+
+## Round 28 (registered)
+
+### Round 28 - the small family's shipped temperatures refitted on held-out datasets, and a validated context length per size (post hoc, no training; registered with this spec's commit, before any round-28 read)
+
+**Why.** Kev-4B (round 10, `r10-skills/00-trial-0`, Hub `139fdd94`, T 2.41) and Kev-0.8B (round 15, `r15-08b/00-trial-0`,
+Hub `9a45d25e`, T 2.35) ship temperatures fitted on their trials' decision-v7 development rows. Those rows are held-out *items*
+of a training corpus: round 19's failure mode, which `docs/autoresearch.md` §3.4 now forbids for any shipped temperature
+(finding 5). `kev.rounds.temperature` on those rows reproduces what ships (4B 2.406, 0.8B 2.351). Kev-27B v2 (T 1.32) and
+Kev-9B v2 (T 2.19, round 27's `9b-r18a`, `jaredpalmer/kev-9b` main since 2026-09-30, Hub `b5d8c18e`, PR #195) already ship the
+held-out pool's fit, so Kev-9B is not an arm here. Its pool T is its shipped T, and its context length is measured on round
+29's read of the same checkpoint. Argmax does not depend on T, so this round is about calibration only. Accuracy is identical
+on every panel by construction, and it is reported anyway.
+
+**Arms** (`experiments/rounds/r28.json`). `4b-r10` and `08b-r15` are the released checkpoints, each served at the temperature
+fitted on the pool below. Each arm's parent is the same checkpoint at its shipped T. The engine serves a parent at its trial's
+development-rows fit, which here is the shipped T. Both sides read the same rows, so every delta is a paired comparison of one
+checkpoint's logits at two temperatures.
+
+**Temperature pool** (rounds 20-27's, unchanged): the eight held-out sources of transfer-r3's calibration partition plus
+transfer-v9's `mmlu_pro`, minus the transfer-v4 development records, with a 90 % bootstrap interval (`temperature.ci`).
+`trained_on` lists what each checkpoint trained on:
+- Kev-4B: the night-2 4B, then round 8's documents-v1 delta (2,000 decision-v7 replay), then round 10's hard-v1 + devtools-v1
+  delta (`evals/round10/skills`, 4,000 replay).
+- Kev-0.8B: the night-2 0.8B, then round 15's joint documents + skills delta (6,000 replay).
+- Both arms name `evals/v7/decision-v7`, `evals/documents-v1`, `evals/round10/skills`, `evals/hard-v1` and `evals/devtools-v1`.
+  `evals/round15/joint` is the concatenation of those, and its manifest lists no sources.
+- `evals/night2` is left out, as in round 27. Its manifest lists no sources, so `validate` would refuse it as unlistable
+  training. Its records are four synthetic families (`night2_dates`, `night2_assertion`, `night2_unknowable`,
+  `night2_unknowable_control`), and none of them is in the pool.
+
+`kev.rounds validate` finds **no pool conflict**: 24 training sources per arm, none of them pooled. As a sanity check, adding
+`evals/round3/transfer-r3` to an arm's `trained_on` makes it refuse the round.
+
+**Rule** (pool-T side minus shipped-T side, paired record-clustered bootstrap, 2,000 resamples, seed 0, micro; `drop_ids` as
+in rounds 24 and 27):
+1. Primary: the pool T must be strictly better calibrated on **breadth-v1 dev + tasksource-heldout-v1 dev pooled**, with the
+   audited exclusions (breadth without `routerbench`, `cfcolor`, `humicroedit`, `chessbench`; tasksource-heldout without the
+   seven families of round 24's private list, `runs/r24-private/tsheld-exclude.json`, sha256 `a72030ab…`). Two conditions:
+   the Brier delta's upper bound < 0, **and** ECE (pool) < ECE (shipped).
+   - Why Brier carries the interval: `kev.rounds` bootstraps both metrics. Brier is a proper score and additive per question,
+     so its record-clustered bootstrap is the exact statistic, and it is also what the locked stage reads.
+   - ECE is binned (10 bins) and not additive, so its resampled differences carry binning noise (the audit measured an ECE
+     sampling sd of 0.006-0.010 per panel).
+   - The ECE point condition stops a temperature that sharpens toward a better Brier but worse reliability from passing.
+2. Guards: ECE (pool) ≤ ECE (shipped) + 0.005 on each of:
+   - breadth-v1 dev (audited);
+   - tasksource-heldout-v1 dev (audited);
+   - transfer-v4 dev, the in-trial read, without `emotion`;
+   - hard-v1 dev;
+   - devtools-v1 dev, without `flakeflagger` and `commitpackft_type`;
+   - documents-v1 dev.
+3. Candidate: an arm that passes. There is one arm per size, so the arm is the size's candidate.
+
+Report only (optional panels, never gating): accuracy (identical) and Brier on every panel; the unknowable share on transfer-v9;
+breadth over all 14 sources; tasksource-heldout over all 24 families; ood-v2, agents-ood-v1 and guardrails-ood-v1 accuracy and
+ECE; longdoc-v1 dev accuracy and ECE per length bucket at both temperatures. The by-length panels use edges 4,096 / 8,192 / 16,384
+/ 32,768 (buckets `under_4k` … `32k_plus` = longdoc's nominal 4k / 8k / 16k / 32k / 64k). The small family's tokenizer counts
+longdoc's states exactly as the suite's Qwen3.8-27B tokenizer does (ratio 1.0000 on 150 records). CUAD ECE is report only because
+its labels are unreliable for calibration (the audit).
+
+**Validated context length** (report only, registered here, gates nothing). The rule is computed by
+`scripts/longdoc_report.py --context-margin -0.03` (`validated_context`, unit-tested) from each size's longdoc-v1
+development read: Kev-4B and Kev-0.8B from this round, Kev-9B v2 from round 29's `9b-r18a` read of the same checkpoint (or,
+if round 29 replaces v2, from that checkpoint's read).
+- Statistic: for bucket b ∈ {16k, 32k, 64k}, the CUAD accuracy difference from the **8k bucket** (states of 6,553-7,618
+  tokens: the 4-8k bucket the small family was trained at, `max_state` 7,552). It is paired on the same (target contract,
+  repeat, question), about 445 questions per bucket, with a 95 % target-clustered bootstrap (2,000 resamples, seed 0).
+  This is the `cuad_paired_vs_8k` statistic longdoc-v1 was built for (#150).
+- b is within tolerance when its interval's **lower bound ≥ −3 pp** and every record of b and of 8k was answered.
+- Validated context length = the nominal size of the largest bucket such that it and every bucket between it and 8k are within
+  tolerance (16,384 / 32,768 / 65,536; 65,536 is the serving cap). If 16k fails, it is 8,192: the trained length, not extended.
+  An unread or partly read bucket is not within tolerance.
+- The generated half, the unpaired differences from the 4k control, the ECE per bucket and the served accuracy per bucket are
+  reported next to it.
+- Sizing. On Kev-27B's own read the paired intervals are 1.5-1.7 pp wide on each side (validated to 65,536 by this rule), so
+  a model with no drop fails a bucket about 5 % of the time. The small models agree less with themselves across lengths, so
+  their intervals will be wider. The rule then errs toward 8,192: it under-claims and never over-claims. An unpaired
+  comparison with the 4-8k buckets pooled would have needed a margin of about 7 pp for the same error rate.
+
+**Blocker: the long reads run out of memory at these sizes.** The 2026-09-30 family longdoc-v1 *test* reads failed with
+`OutOfMemoryError` (`/bench/fam-*-longdoctest/failure.json` on the volume):
+- Kev-4B, Kev-9B v1 and Kev-9B v2 at the first 32k record (720 of 1,200 records scored);
+- Kev-0.8B at the first 64k record (960 scored), on an H100 and again on an H200.
+
+Kev-27B's reads of the same suite completed, but they ran a bf16 backbone. The same wall should stop agents-ood-v1 (47 of 373
+development states over 26k tokens, max 51,148) and guardrails-ood-v1 (12 of 1,263, max 39,072).
+
+A plausible cause, not verified: these reads run in fp32 at a head size of 256. That rules out SDPA's flash kernel and maybe
+the memory-efficient one too, which leaves the math kernel. Its fp32 L × L scores take about 58 GB for the 4B and 9B at the
+32k bucket (16 heads × 30k² × 4 B) and about 115 GB for the 0.8B at 64k (8 heads). That fits where each size failed. Whatever
+the fix is, it is an evaluator change: its own PR, `kev-verify`, before these reads.
+
+Until then the longdoc, agents-ood and guardrails-ood reads are phase B (below) and stay unlaunched. Round 28's verdict does not
+need them (its long and OOD panels are report only). Without phase B, no size has a validated context length.
+
+**Confirmation** (per size whose arm passes, once; computed from rows that already exist, with no new read):
+- `tests`: breadth-v1 test (without the four sources) ECE (pool) < ECE (shipped), Brier and the 14-source panel reported. The
+  rows are the 2026-09-30 family reads `runs/fam-4b-breadthtest` and `runs/fam-08b-breadthtest` (the Hub checkpoints, raw
+  logits).
+- `locked`: transfer-v4 locked served Brier (pool) ≤ Brier (shipped) + 0.005, and accuracy identical (two criteria, ≥ 0 and ≤ 0).
+  The rows are the release locked reads `runs/locked/kev-4b-r10-ungated` and `kev-08b-r15-ungated`.
+- These partitions have been read once for these very checkpoints, and they are not read again. What has not been computed
+  before this registration is their calibration at the pool T, and the pool fixes that T before either set is looked at. No
+  committed record reports these checkpoints' breadth-v1 test ECE.
+- Then `scripts/calibrate_checkpoint.py` in pool mode writes the pool T into a release copy's `head.pt` (`--rows <r3cal
+  rows>:composition_holdout,emotion,legacy_holdout,mmlu,paws,qnli,sciq,tweet_offensive --rows <v9 rows>:mmlu_pro
+  --exclude_rows <transfer rows>`, the same `pool_conflicts` check). Publishing it, and moving the model cards' served numbers,
+  needs Jared's OK.
+
+**Reads this round needs that do not exist yet** (the sweep after merge; H100). Each is one job of `modal_app.py::benchmarks`
+at its suite's timeout. `launch-reads --dry-run` prints them, and phase-B jobs have to be dropped from its batch by hand.
+
+| phase | reads | count |
+|---|---|---|
+| A (now) | `r28-{4b-r10,08b-r15}-{tsheld,r3cal,ood}` | 6 |
+| B (after the memory fix) | `r28-{4b-r10,08b-r15}-{longdoc,agentsood,guardood}` | 6 |
+
+Existing reads it uses: breadth-v1 dev `runs/fam-{4b,08b}-breadth`; hard-v1 / devtools-v1 / documents-v1 / transfer-v9
+`runs/r10-4b-skills-*` and `runs/r15-08b-a-*`; the trials' in-trial transfer-v4 reads; for confirmation `runs/fam-{4b,08b}-breadthtest`
+and the two locked reads. The fam-* rows are on the volume only (`modal volume get kev-runs /bench/fam-4b-breadth runs/`); the
+rest are in the research checkout. The budget is shared with round 29, below.
+
+## Round 29 (registered)
+
+### Round 29 - retrospective selection among every 9B delta of rounds 7, 9, 11, 16 and 18 under round 24's audited rule (post hoc, no training; registered with this spec's commit, before any round-29 read)
+
+**What this is, plainly.** This is **post hoc selection among checkpoints that were already trained and already read on
+development data**, the 9B analogue of round 24. The rounds that made them selected no 9B candidate (7, 9, 11, 16, 18); round 27
+later selected and confirmed round 18's arm (a), which is now Kev-9B v2. Those verdicts stand, and nothing here revisits them.
+The rule is round 24's audited rule, fixed in this commit before any computation under it. It is not blind: the documents,
+hard-v1 and devtools-v1 development reads of several arms are in their rounds' read-outs, and round 27's table shows 18a and 18b.
+Picking the best of 11 on development panels is optimistic by construction, and the guard against that is the confirmation,
+on test partitions that no 9B checkpoint in this round except `9b-r18a` has read.
+
+**Parent: the Kev-9B these arms were all trained from, not Kev-9B v2.** Every arm is one epoch from `jaredpalmer/kev-9b` as
+it was before 2026-09-30: `night2-9b-du/00-trial-0`, Hub `2629c06a`, now the `v1` tag, T 2.30, which its development rows
+reproduce (2.297). Kev-9B v2 is `9b-r18a` itself, and it is an arm. Two reasons for this choice:
+- `kev.rounds` serves a parent at its trial's development-rows fit, which for `r18-9b/00-trial-0` is 2.297, not v2's shipped
+  2.19. v2 cannot be a parent served at its shipped T without an engine change.
+- As an arm served at the pool T, `9b-r18a` is v2 exactly as it ships: the pool fit on its reads is 2.1936, the value written
+  into its `head.pt`. So every arm, v2 included, is compared with v1 on the same rows, and the rank puts each arm directly
+  against v2.
+
+The brief asked for "parent = the released Kev-9B at its shipped T". When it was written, the released Kev-9B was v1.
+
+**Arms** (all on the `kev-runs` volume; none missing). Round 12's two 9B skills arms (`r12-skills/00-trial-0`, `01-trial-1`,
+also on the volume) are outside this round's registered scope.
+
+| arm | checkpoint | delta (one epoch from Kev-9B v1) | trained on |
+|---|---|---|---|
+| `9b-r7-s1`, `9b-r7-s2` | `r7-docs/00-trial-0`, `01-trial-1` | documents-v1, replay 2,000, lr 2e-5, seeds 1 / 2 | decision-v7, documents-v1 |
+| `9b-r9-a`, `-b`, `-c` | `r9-docs/0{0,1,2}-trial-*` | documents-v1; (replay, lr) = (6,000, 2e-5), (2,000, 1e-5), (6,000, 1e-5); seed 3 | decision-v7, documents-v1 |
+| `9b-r11-s4`, `9b-r11-s5` | `r11-docs/00-trial-0`, `01-trial-1` | documents-v1, replay 6,000, lr 2e-5, seeds 4 / 5 | decision-v7, documents-v1 |
+| `9b-r16-lr1e5`, `9b-r16-lr2e5` | `r16-9b/00-trial-0`, `01-trial-1` | hard-v1 + devtools-v1 (`round10/skills`), replay 10,000 | decision-v7, round10/skills, hard-v1, devtools-v1 |
+| `9b-r18a` (= Kev-9B v2), `9b-r18b` | `r18-9b/00-trial-0` (lr 2e-5), `01-trial-1` (lr 1e-5) | documents + skills (`round15/joint`), replay 10,000 | decision-v7, documents-v1, round10/skills, hard-v1, devtools-v1 |
+
+`evals/night2` (v1's own delta) is left out of `trained_on` for the reason given in round 28. `validate` finds **no pool
+conflict** for any arm.
+
+**Temperature.** Every arm is served at round 28's pool: transfer-r3 calibration's eight sources plus transfer-v9 `mmlu_pro`,
+minus the arm's transfer-v4 development records, with a 90 % interval. The parent keeps its shipped 2.30.
+
+**Rule** (round 24's, verbatim except where noted; against Kev-9B v1; paired record-clustered bootstraps, 2,000 resamples,
+seed 0, micro; `drop_ids`):
+1. Primaries:
+   - breadth-v1 dev accuracy lower > 0, without `routerbench`, `cfcolor`, `humicroedit`, `chessbench`;
+   - tasksource-heldout-v1 dev accuracy lower > 0, without the seven families (the same private list);
+   - Kev panel accuracy lower ≥ −1 pp: transfer-v4 dev without `emotion`, hard-v1, devtools-v1 without `flakeflagger` and
+     `commitpackft_type`, and documents-v1.
+2. Guards:
+   - short state (transfer-v4 dev + transfer-r3 test, both without `emotion`): accuracy lower ≥ −2 pp, Brier upper ≤ +0.02,
+     confident errors upper ≤ +1 pp;
+   - unknowable share on transfer-v9 ≤ 0.05;
+   - longdoc CUAD: accuracy lower ≥ −2 pp, and CUAD 16k+ accuracy (arm − parent) ≥ −2 pp.
+3. Calibration: breadth, Kev-panel and tasksource-heldout ECE ≤ the parent's + 0.01, with the same exclusions.
+4. Candidate: the passing arm with the largest breadth + tasksource-heldout + Kev-panel accuracy gain.
+
+What round 24 had that this round drops: its WANLI-v2 and TypeSafe panels (both suites were removed on 2026-09-30), and any
+pooled-externals or scienthoon read. SemIf is reported (optional). Also reported: breadth over all 14 sources and over the three
+moved sources, tasksource-heldout over all 24 families, hard-v1 alone, the Kev panel without hard-v1, longdoc generated,
+longdoc by nominal bucket, and ood-v2 / agents-ood-v1 / guardrails-ood-v1.
+
+**What each outcome means** (written before any read):
+- *No arm passes.* There is no candidate. Kev-9B v2's release stands, as round 27 registered it, and the result is recorded
+  (including `9b-r18a`'s own failures, if any, as information).
+- *`9b-r18a` is the candidate.* The audited rule agrees with round 27, and Kev-9B v2 stands. There is **no new confirmation**:
+  its hard-v1, devtools-v1, documents-v1, documents-v2 and locked test reads were round 27's confirmation, and its breadth-v1 test
+  was read in the 2026-09-30 family reads, so none of them can be read again as a confirmation.
+- *Another arm X is the candidate.* X is confirmed against v1 by the stages below. Its accuracy on the same test items
+  against Kev-9B v2 is reported next to each stage (`versus`: v2's round-27 test reads and its family breadth-v1 test read;
+  accuracy only, which does not depend on T). Replacing v2 with X is Jared's decision, and only if X passes every stage.
+
+**Confirmation** (X only, each read once; round 24's stages at 9B):
+- `tests`:
+  - breadth-v1 test accuracy lower > 0 (the same four sources out; all 14 reported);
+  - tasksource-heldout-v1 test lower > 0 (the seven families out);
+  - pooled hard-v1 + devtools-v1 (without `flakeflagger` and `commitpackft_type`) + documents-v1 test lower ≥ −1 pp;
+  - documents-v2 and longdoc-v1 test (CUAD by length, generated) reported.
+  - Parent test reads: `runs/fam-9b-breadthtest` and round 27's `runs/r27c-9b-parent-{hardtest,devtest,docs1test,docs2}`. New:
+    `runs/r29c-9b-parent-{tshtest,longdoctest}`.
+- `locked`: transfer-v4 locked accuracy ≥ v1's − 1 pp, and served Brier ≤ v1's + 0.005 (`kev-9b-r29-ungated`). This is round 24's
+  construction: its absolute bars were Kev-27B's own −1 pp / +0.005.
+- Before any release, the bf16 serving check: `modal_app.py::serving --run /runs/<X>/checkpoint --gpu H100 --name
+  serving-9b-r29 --flags=--isolation`, max |Δp| ≤ 0.03 and ≤ 1 flip in 280. The release temperature is the pool fit, written
+  by `scripts/calibrate_checkpoint.py` as in round 28.
+
+**Blocker.** The CUAD guards gate, so round 29 cannot be read out until the longdoc-v1 reads can be made at 9B (round 28's
+blocker: the family test reads ran out of memory at the first 32k record). The rule is not changed to get around that. Making
+the long panel report-only at 9B would be a re-registration, and that is Jared's call, before any round-29 read.
+
+**Reads this round needs that do not exist yet** (the sweep after merge; H100):
+
+| phase | reads | count |
+|---|---|---|
+| A (now) | parent `r29-P9-{tsheld,ood}`; `breadth` for the 10 arms other than 18a; `tsheld` and `ood` for all 11; `hard` and `devtools` for r7 ×2, r9 ×3, r11 ×2; `r3test` for r7 ×2 and r9 ×3; `r3cal` for the 9 arms other than 18a / 18b | 2 + 10 + 22 + 14 + 5 + 9 = 62 |
+| B (after the memory fix) | `longdoc`, `agentsood`, `guardood` for the parent and all 11 arms | 36 |
+| confirmation (X ≠ 18a only) | `r29c-9b-cand-{breadthtest,tshtest,hardtest,devtest,docs1test,docs2}`, `r29c-9b-parent-tshtest`, the locked read, the serving check; phase B: `r29c-9b-{cand,parent}-longdoctest` | 7 + 1 + 2 = 10, + serving |
+
+Existing reads it uses:
+- parent: `runs/fam-9b-breadth`, `hv1-P9`, `dt1-P9`, `docs1-P9`, `n2-9b-du-v9`, `rc-parent-r3test`, `r5r-P9-semif`, the locked read;
+- arms: their rounds' `docs` / `v9` / `semif` (and `hard` / `devtools` / `r3test` for r11, r16 and r18); round 27's `r27-9b-r18{a,b}-r3cal`;
+  `runs/fam-9bnew-breadth` for 18a; every trial's in-trial transfer-v4 read.
+
+They are in the research checkout, `/tmp/kev-r27` (fam-9b*, not yet committed) and the volume.
+
+**Budget (rounds 28 + 29 together).** H100 at $5.675/h per container (`kev.budget.hourly_rate`). Expected costs are estimated
+from past reads' latencies at 9B (breadth ~10 min, hard ~7, tasksource-heldout ~6, ood ~6.5, the short suites ~4-5, each
+including the load); the 4B and 0.8B are cheaper.
+
+| part | reads | expected | admission bound |
+|---|---|---|---|
+| phase A | 68 (6 + 62) | ≈ $40 | $193 (68 × $2.84 at 1,800 s) |
+| phase B | 42 (6 + 36) | ≈ $115 | $318 (14 longdoc × $17.03 at 10,800 s + 28 × $2.84) |
+| round 29 confirmation, if X ≠ 18a | 10 (8 now, 2 phase B) + serving | ≈ $30 | ≈ $77 |
+| round 28 confirmation | 0 (existing rows) | $0 | $0 |
+| **total** | 120 + serving | **≈ $185** | $588 if all in flight at once |
+
+The cap is $300 with a 10 % reserve, so $270 is plannable against the metered reading at launch. At registration Modal read
+$4,633.77 metered (2026-09-30T22:45Z); the last night ceiling was $5,980.
+
+The expected total fits. The bounds do not fit all at once, so the sweep launches in waves, each while (metered − baseline) +
+the bounds in flight < $270. Order: phase A; round 28's read-out; the memory-fix PR; phase B, longdoc first; round 29's
+read-out; then confirmation. A 9B agents-ood read may need more than its 1,800 s default (Kev-27B's took about 66 min):
+relaunch it alone with `--timeout 3600` rather than raising the spec's `read_timeout`, which would double every 9B bound.
 
 ## Record
 

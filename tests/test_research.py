@@ -995,3 +995,24 @@ def test_jsonl_round_trips_unicode_line_separators(tmp_path):
     recs = [{"state": "line one\u2028line two"}, {"state": "next\x85record\u2029end"}, {"state": "plain"}]
     write_jsonl(tmp_path / "x.jsonl", recs)
     assert read_jsonl(tmp_path / "x.jsonl") == recs
+
+
+def test_validated_context_is_the_largest_unbroken_bucket_within_the_margin():
+    from scripts.longdoc_report import validated_context
+    def buckets(lowers, answered=None):
+        out = {b: {"coverage": {"records": 240, "answered": 240}} for b in ("4k", "8k", "16k", "32k", "64k")}
+        for b, lower in lowers.items():
+            out[b]["cuad_paired_vs_8k"] = None if lower is None else {"questions": 450, "delta": lower + 0.02, "ci95": [lower, lower + 0.04], "falls": False}
+        for b, n in (answered or {}).items(): out[b]["coverage"]["answered"] = n
+        return out
+    full = validated_context(buckets({"16k": -0.02, "32k": -0.029, "64k": -0.03}), -0.03)
+    assert full["validated_tokens"] == 65536 and full["first_failure"] is None
+    # 32k breaks the chain: 64k passing on its own does not extend it
+    broken = validated_context(buckets({"16k": -0.01, "32k": -0.031, "64k": 0.0}), -0.03)
+    assert (broken["validated_bucket"], broken["first_failure"], broken["buckets"]["64k"]["within"]) == ("16k", "32k", True)
+    # nothing beyond the trained 4-8k bucket: the reference itself
+    assert validated_context(buckets({"16k": -0.05, "32k": 0.0, "64k": 0.0}), -0.03)["validated_tokens"] == 8192
+    # an unread or partly read bucket is not within tolerance, and neither is anything when 8k is incomplete
+    assert validated_context(buckets({"16k": 0.0, "32k": None, "64k": 0.0}), -0.03)["validated_bucket"] == "16k"
+    assert validated_context(buckets({"16k": 0.0, "32k": 0.0, "64k": 0.0}, {"64k": 239}), -0.03)["validated_bucket"] == "32k"
+    assert validated_context(buckets({"16k": 0.0, "32k": 0.0, "64k": 0.0}, {"8k": 0}), -0.03)["validated_tokens"] == 8192
