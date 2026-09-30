@@ -1836,7 +1836,8 @@ Jared approved the release on 2026-09-30. Kev-27B v2 (round 23's `27b-k-w85`, in
   (`scripts/compare_release_rows.py`). A first decision-v7 development read of v2 (report only; the README's trained-sources
   cell) gives 0.865 (v1 0.866). `jaredpalmer/kev-27b@v1-lora` resolves to v1's adapter (`41bf5af0…`) at T 1.3819 and
   scores semif-v1 0.972 with argmax equal on 252 of 252 rows to the 2026-09-23 read; its logits are not bit-identical to
-  that read (max |Δp| 0.032), which was made with an older kev and dependency set (not investigated). Rows and reports:
+  that read (max |Δp| 0.032). The cause is causal-conv1d's CUDA kernel, which #125 added to the Modal image after that read;
+  kev's code is not involved (`runs/drift-v1/REPORT.md`). Rows and reports:
   `runs/rel27-public/`.
 - **Docs.** `docs/model-cards/kev-27b.md` is now v2's card (the candidate card, without the candidate wording, with a
   "Previous version" note for `@v1-lora`; every limitation and the post-hoc caveat kept); `kev-27b-v2.md` is gone. README
@@ -2658,6 +2659,7 @@ outcomes.
 | Round 26 | 09-29 | round 25's lr 1e-6 arm with tasksource-v1 doubled (`sft-v2-r26`: sft-v2-r25 + 13,000 tasksource-v1 records, 58,515), one study, 4 candidates, round 24's rule | no candidate (0 of 4): every arm fails breadth ECE (0.020-0.029 vs 0.0176); the final fails only that (11/12), the snapshots also the breadth primary, s50 also short-state accuracy; against round 25's lr 1e-6 arm breadth and breadth ECE level (report only); none ahead of `27b-k-w85` (report only) | `r26.json`; `runs/r26-readout`; "Round 26 result" |
 | WANLI and TypeSafe removed | 09-30 | `evals/external/{wanli-v2, wanli-v1, typesafe-v1}` removed as unsound for a gate (a quarter of WANLI's gold labels are one of two disagreeing annotators'; TypeSafe's gold is two closed frontier models' averaged answer, split-half r about 0) | past verdicts stand; SemIf is the only external read from round 27, report only | "WANLI and TypeSafe removed"; `kev.suite.REMOVED_SUITES` |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |
+| drift-v1 | 09-30 | why Kev-27B v1's semif-v1 logits differ between its 09-23 read and the 09-30 public read (max \|Δp\| 0.032, argmax equal) | report: #125's causal-conv1d CUDA kernel in the Modal image (replacing transformers' PyTorch conv in the 48 DeltaNet layers); no code drift (09-23 code and `main` bit-identical on the same kernels), no nondeterminism; breadth-v1 offset acc −0.1 pp, ECE +0.0008, 13/3,075 flips, below every round-25/26 margin; fp32 Qwen3.5 reads on CUDA carry fla's TF32 dots (≈ 0.003 in p) | `runs/drift-v1/REPORT.md`; AGENTS.md "What fp32-exact guarantees" |
 
 Older milestones, all in `A:PLAN.md` (sections named in parentheses):
 

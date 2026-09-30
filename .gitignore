@@ -524,3 +524,10 @@ runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/*
 !runs/kev-deploy-27b-v2/deploy_check.json
 !runs/kev-deploy-27b-v2/make_long_state.py
 !runs/kev-deploy-27b-v2/semif-v1/rows.json
+# drift-v1 (runs/drift-v1/REPORT.md): why Kev-27B v1's reads moved between 2026-09-23 and 2026-09-30; the probe, its
+# comparison scripts and every read it made (per row: id, question, raw logits; no record text)
+!runs/drift-v1/*.py
+!runs/drift-v1/*.json
+!runs/drift-v1/REPORT.md
+!runs/drift-v1/*/
+!runs/drift-v1/*/*.json
