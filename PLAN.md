@@ -7,24 +7,29 @@ through night 3, rounds 4-18) is frozen at the git tag `research-archive-2026-09
 `A:PLAN_27b.md`, the Kev-27B plan). How to run an unattended research session is in
 [`docs/autoresearch.md`](docs/autoresearch.md).
 
-## Where we stand (2026-09-29)
+## Where we stand (2026-09-30)
 
 ### The released family
 
 All four are public in the [Kev collection](https://huggingface.co/collections/jaredpalmer/kev-6aad9d0ea49f2589665e07cd).
-Kev-4B round 10 and Kev-0.8B round 15 were released and Kev-27B made public on 2026-09-24 (docs in PR #106).
+Kev-4B round 10 and Kev-0.8B round 15 were released and Kev-27B made public on 2026-09-24 (docs in PR #106). Kev-27B v2
+(round 23's `27b-k-w85`, full weights) replaced it on 2026-09-30; v1 (the LoRA adapter) stays at `jaredpalmer/kev-27b@v1-lora`
+("Released: Kev-27B v2").
 
 | model | checkpoint | T | locked transfer-v4: acc / Brier | other confirmation reads (once each) | JevBench public: all / hard (hard ECE) |
 |---|---|---|---|---|---|
-| Kev-27B | `r6-27b-v2/01-trial-1` (B1 v2 seed 2), `Qwen/Qwen3.8-27B@1d4bf0f2` (post-trained), Hub `01b81998` | 1.38 | **0.896 / 0.160** | decision-v7 locked 0.870; transfer-r6 test 0.863 vs Kev-9B 0.842 (+2.1 pp [+0.35, +3.8]); longstate-v3 0.833 vs 0.556 | **0.866 / 0.721** (0.128) |
+| Kev-27B v2 | round 23 `27b-k-w85` (0.85 round-22 full-weight SFT + 0.15 v1, SFT head), full bf16 weights `d27af6ab…`, `Qwen/Qwen3.8-27B@1d4bf0f2` (post-trained), Hub `28be62e9` (weights) | 1.32 (pool) | **0.889 / 0.154** | vs v1: breadth-v1 test +1.2 [+0.3, +2.2]; tasksource-heldout-v1 test +5.3 [+3.7, +6.8]; pooled hard / devtools / documents test +8.9 [+7.5, +10.3]; locked −0.8 [−2.0, +0.5]; CUAD test −1.6 [−3.0, −0.3], ECE 0.053 vs 0.007 | not read |
+| Kev-27B v1 (tag `v1-lora`) | `r6-27b-v2/01-trial-1` (B1 v2 seed 2), LoRA, Hub `01b81998` | 1.38 | 0.896 / 0.160 | decision-v7 locked 0.870; transfer-r6 test 0.863 vs Kev-9B 0.842 (+2.1 pp [+0.35, +3.8]); longstate-v3 0.833 vs 0.556 | **0.866 / 0.721** (0.128) |
 | Kev-9B | `night2-9b-du/00-trial-0` (v7 + dates/unknowable delta) | 2.30 | 0.852 / 0.237 | - | 0.762 / 0.568 (0.19) |
 | Kev-4B | `r10-skills/00-trial-0` (night2 + documents-v1 (round 8) + hard-v1 & devtools-v1 (round 10)), Hub `139fdd94` | 2.41 | 0.838 / 0.224 | hard-v1 test 0.540 → 0.803; devtools-v1 test 0.623 → 0.756 | 0.758 / 0.541 (0.112) |
 | Kev-0.8B | `r15-08b/00-trial-0` (night2 + documents-v1, hard-v1, devtools-v1 in one delta), Hub `9a45d25e` | 2.35 | 0.697 / 0.397 | documents-v1 test 0.608 → 0.851; hard-v1 test 0.396 → 0.665; devtools-v1 test 0.472 → 0.637; documents-v2 (private) 0.848 | 0.636 / 0.360 (0.181) |
 | Jev (reference) | hosted | - | transfer-v4 dev 0.857 (never locked) | - | 0.866 / 0.741 (0.06; their board, tiers include held-out items) |
 
-T is the temperature in `head.pt`, fitted on the trial's decision-v7 development rows; locked Brier is served at that T.
-Evidence: `runs/release/kev-{27b-v2,4b-r10,08b-r15}.json`, `experiments/releases/*.json`, `runs/jevbench-public/`, the model
-cards. Previous weights are Hub tags (`kev-4b@r8-documents-release`, `kev-4b@night2-du-release`, `kev-0.8b@night2-du-release`, `@v7-base`).
+T is the temperature in `head.pt`, fitted on the trial's decision-v7 development rows (Kev-27B v2: round 23's registered pool of
+held-out datasets, 648 questions); locked Brier is served at that T.
+Evidence: `runs/release/kev-{27b-r23,27b-v2,4b-r10,08b-r15}.json` (`kev-27b-v2` = v1's B1 v2 records), `experiments/releases/*.json`,
+`runs/release/kev-27b-r23-published.json`, `runs/jevbench-public/`, the model cards. Previous weights are Hub tags (`kev-27b@v1-lora`,
+`kev-4b@r8-documents-release`, `kev-4b@night2-du-release`, `kev-0.8b@night2-du-release`, `@v7-base`).
 
 ### Against Jev and outside models
 
@@ -110,9 +115,9 @@ cards. Previous weights are Hub tags (`kev-4b@r8-documents-release`, `kev-4b@nig
 - **scienthoon removed** (2026-09-27): `evals/external/scienthoon-v1` is no longer a Kev eval; past verdicts stand, and from
   round 23 there is no scienthoon read or guard ("scienthoon removed" below). Round 24's audited rule, which round 23 now
   follows, gates no pooled externals: SemIf, WANLI-v2 and TypeSafe are reported.
-- **Kev-27B v2 release candidate** (round 23's `27b-k-w85`, T 1.32) is staged privately in `jaredpalmer/kev-27b-v2-candidate`
-  and waits on Jared's approval; nothing about it is public ("Release candidate: Kev-27B v2").
-- Decisions waiting on Jared: release Kev-27B v2 or not; upload the documents-v1 and hard-v1 train partitions to `jaredpalmer/kev-suites` and bump
+- **Kev-27B v2 released** (2026-09-30, Jared's approval): round 23's `27b-k-w85`, T 1.32, is `jaredpalmer/kev-27b` main
+  (weights commit `28be62e9`, card `0d7f9b49`); v1 is tag `v1-lora` ("Released: Kev-27B v2").
+- Decisions waiting on Jared: upload the documents-v1 and hard-v1 train partitions to `jaredpalmer/kev-suites` and bump
   `SUITES_REVISION` (see Next); submit Kev-27B (and the new 4B / 0.8B) to the Decision Index.
 - Spend: Modal metered $4,558.69 at 2026-09-29T13:01Z after round 26's last read (+$104.88 over its launch reading of
   $4,453.81; the 11:17Z reading was $4,650.37, +$196.56, and was revised down by 12:56Z; night ceiling ≈ $5,980, hard stop
@@ -1768,7 +1773,43 @@ checkpoint to pass a registered confirmation. It is not published. If it is rele
 - it is still 0.85 round 22's final, and the blend recovered almost none of Kev-27B's short-state or CUAD behaviour
   ("What the blends did").
 
-## Release candidate: Kev-27B v2 (private, awaiting approval)
+## Released: Kev-27B v2 (2026-09-30)
+
+Jared approved the release on 2026-09-30. Kev-27B v2 (round 23's `27b-k-w85`, internal id `kev-27b-r23`) is now
+`jaredpalmer/kev-27b` main, public; v1 (the B1 v2 LoRA adapter) is tag `v1-lora`. Record:
+`runs/release/kev-27b-r23-published.json`.
+
+- **v1 first.** Before any upload, the repo's main was checked to be `01b81998…` and tagged `v1-lora` (annotated tag object
+  `512eeb74…`), which resolves to `01b81998` for an anonymous client.
+- **Upload.** `modal_app.py::release_publish --public --confirm-public jaredpalmer/kev-27b --replace` (a CPU container, app
+  `kev-release`; the private default stays and `--public` needs the repo named twice) ran `kev.publish` on
+  `/runs/release/kev-27b-r23/checkpoint`: commit **`28be62e9`**. `kev.publish --replace` (new) deletes every file the upload
+  does not carry in the same commit (`upload_folder(delete_patterns="*")`), so v1's `adapter_config.json`,
+  `adapter_model.safetensors`, `result.json`, `provenance.json`, `train.log`, `training_config.json` and
+  `training_metrics.json` went in the commit that added the shards; without `--replace`, a full-weight upload into a repo
+  holding an adapter is now refused, because the loader rule would pick the adapter. The Hub's LFS hashes give weights
+  `d27af6ab…` and `head.pt` `7968f17b…`, the release copy's. Card metadata: `base_model: Qwen/Qwen3.8-27B`,
+  `base_model_relation: finetune`, `library_name: transformers`. The card went up without its verification line, which
+  was added in a README-only commit after the check below (`0d7f9b49`, main since).
+- **Anonymous verification.** `modal_app.py::release_verify` (new): an H200 with no Modal secret, no `kev-hf-cache` volume,
+  a fresh `HF_HOME` and no token (`get_token()` is None in every job). `jaredpalmer/kev-27b` resolved to the full-weight
+  layout at T 1.3195 with weights `d27af6ab…`. Served reads reproduced round 23's reads row for row: semif-v1 252 of 252
+  and transfer-v4 development 764 of 764 rows have logits equal to the committed raw logits times fp32(1/T) bit for bit
+  (`scripts/compare_release_rows.py`). A first decision-v7 development read of v2 (report only; the README's trained-sources
+  cell) gives 0.865 (v1 0.866). `jaredpalmer/kev-27b@v1-lora` resolves to v1's adapter (`41bf5af0…`) at T 1.3819 and
+  scores semif-v1 0.972 with argmax equal on 252 of 252 rows to the 2026-09-23 read; its logits are not bit-identical to
+  that read (max |Δp| 0.032), which was made with an older kev and dependency set (not investigated). Rows and reports:
+  `runs/rel27-public/`.
+- **Docs.** `docs/model-cards/kev-27b.md` is now v2's card (the candidate card, without the candidate wording, with a
+  "Previous version" note for `@v1-lora`; every limitation and the post-hoc caveat kept); `kev-27b-v2.md` is gone. README
+  (Models row, text, Serving H200 row from `runs/serving-27b-r23`), the family figures, kev-deploy's GPU notes and
+  `docs/claims.json` follow. The collection already listed `jaredpalmer/kev-27b`. The Space serves 4B / 0.8B and is
+  unchanged. GitHub release `kev-family`: `kev-27b.tar.gz` (v1's adapter) removed, `SHA256SUMS.txt` regenerated for the
+  three remaining tarballs (each re-verified), notes updated (v2 is on the Hub only: 51 GB exceeds the 2 GB asset limit).
+- **Spend.** Modal metered $4,574.06 at 2026-09-30T17:49Z before the upload and $4,575.82 at 18:23Z after it and the
+  verification (metering lags; app `kev-release`: one CPU upload, one H200 container of about 40 minutes, plus a first attempt of about 10 minutes that failed on an existing output directory after loading).
+
+### Release candidate (2026-09-28, private; the staging record)
 
 Round 23's confirmed candidate `27b-k-w85` is staged as a **private** release candidate, **Kev-27B v2**, for Jared's review
 (2026-09-28). Nothing is public: no public repository or revision, no public card, no README, Space or collection change,
@@ -2573,7 +2614,8 @@ outcomes.
 | Round 22 | 09-26/27 | round 21's science and rule on `sft-v2-r22` (145,840 records) with `--pass_tokens_max 40960`, one arm (lr 2e-6), 4 candidates (snapshots s25 / s50 / s75 + final) | no candidate (0 of 4): primaries pass and grow with training (final breadth +1.3, tasksource-heldout +3.8, Kev panel +7.8); every candidate fails scienthoon and CUAD ECE at 16k+, three the pooled externals, s75 and the final short-state accuracy; calm-called-angry errors gone, angry missed instead; Modal gave 2 of 3 attempts, final finished by a manual continuation | `r22.json`; `runs/r22-readout`, `runs/r22-breadth-report`, `runs/r22-scienthoon`; "Round 22 result" |
 | scienthoon removed | 09-27 | `evals/external/scienthoon-v1` removed as unsound for a gate (saturated `queue`, text-unknowable `priority`, 15 of 291 `angry` labels contradicting the text) | past verdicts stand; pooled externals = SemIf + WANLI-v2 + TypeSafe from round 23 | "scienthoon removed"; `kev.suite.REMOVED_SUITES` |
 | Round 24 | 09-27 | retrospective selection: the 2026-09-27 audit's suite verdicts as one rule on all 12 full-weight 27B checkpoints (rounds 19, 20, 22), no training or new read | candidate `27b-r22-final` (2 of 12 pass: it and `27b-r20a-w85`); **not confirmed**: tests stage passed (breadth-v1 test +1.5, tasksource-heldout-v1 test +5.3, pooled +8.6; test breadth index 53.7 vs Jev 54.0, Kev-27B 50.2), locked transfer-v4 0.8841 < 0.886 (580 of 656, 582 needed); CUAD test −1.8; not released | `r24.json`; `runs/r24-readout`, `runs/r24-verdict`, `runs/r24-breadth-report`; "Round 24 result", "Round 24 confirmation" |
-| Round 23 | 09-27/28 | post-hoc, no training: round 22's final blended toward Kev-27B's own weights (LoRA merged in fp32), α 0.85 / 0.70 / 0.50 × {SFT head, blended head}; re-registered 09-28 on round 24's audited rule and confirmation (the first registration, on round 22's rule, never launched) | registered | `r23.json`; "Round 23 (registered)" |
+| Round 23 | 09-27/28 | post-hoc, no training: round 22's final blended toward Kev-27B's own weights (LoRA merged in fp32), α 0.85 / 0.70 / 0.50 × {SFT head, blended head}; re-registered 09-28 on round 24's audited rule and confirmation (the first registration, on round 22's rule, never launched) | **`27b-k-w85` confirmed** (5 of 6 pass the rule; tests stage passed; locked transfer-v4 0.8887, 583 of 656, bar 582); released as Kev-27B v2 on 09-30 | `r23.json`; `runs/r23-readout`, `runs/r23-verdict`; "Round 23 result", "Round 23 confirmation", "Released: Kev-27B v2" |
+| Release: Kev-27B v2 | 09-30 | round 23's `27b-k-w85` published to `jaredpalmer/kev-27b` main (full bf16 weights `d27af6ab…`, head `7968f17b…`, T 1.3195) in one commit that deleted v1's adapter files; v1 tagged `v1-lora` first | **released**; anonymous Hub load reproduced round 23's semif-v1 and transfer-v4 development reads row for row; `@v1-lora` loads v1 at T 1.38 | `runs/release/kev-27b-r23-published.json`; `runs/rel27-public/`; "Released: Kev-27B v2" |
 | Round 25 | 09-28/29 | continued full-weight SFT from Kev-27B (LoRA merged) on `sft-v2-r25` (breadth + b1v2 replay, no long-document families, states ≤ 16k), lr 1e-6 / 2e-6, 8 candidates (snapshots + finals), round 24's rule | no candidate (0 of 8): every arm fails breadth ECE (0.023-0.035 vs 0.0176); lr 1e-6 s75 / final fail only that (11/12); lr 2e-6 also short-state accuracy and the breadth primary; CUAD accuracy held, CUAD ECE did not; none ahead of `27b-k-w85` (report only) | `r25.json`; `runs/r25-readout`; "Round 25 result" |
 | Round 26 | 09-29 | round 25's lr 1e-6 arm with tasksource-v1 doubled (`sft-v2-r26`: sft-v2-r25 + 13,000 tasksource-v1 records, 58,515), one study, 4 candidates, round 24's rule | no candidate (0 of 4): every arm fails breadth ECE (0.020-0.029 vs 0.0176); the final fails only that (11/12), the snapshots also the breadth primary, s50 also short-state accuracy; against round 25's lr 1e-6 arm breadth and breadth ECE level (report only); none ahead of `27b-k-w85` (report only) | `r26.json`; `runs/r26-readout`; "Round 26 result" |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |

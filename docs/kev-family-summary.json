@@ -55,21 +55,21 @@
       }
     },
     "kev-27b": {
-      "path": "runs/release/kev-27b-v2/result.json",
-      "transfer_acc": 0.8475609756097561,
-      "transfer_brier": 0.23605235368270622,
+      "path": "runs/r23-27b-k-w85-transfer4/report.json",
+      "transfer_acc": 0.850609756097561,
+      "transfer_brier": 0.2247086065272272,
       "tasks": {
         "composition_held_and_or": 0.90625,
-        "composition_held_conditional": 0.875,
+        "composition_held_conditional": 0.90625,
         "composition_held_or_not": 0.90625,
         "contrastive_authorization": 1.0,
         "contrastive_deadline": 0.925,
         "emotion": 0.5875,
-        "mmlu": 0.8375,
-        "paws": 0.7875,
+        "mmlu": 0.9,
+        "paws": 0.7625,
         "qnli": 0.9375,
-        "sciq": 0.975,
-        "tweet_offensive": 0.7875
+        "sciq": 0.9625,
+        "tweet_offensive": 0.775
       }
     }
   },

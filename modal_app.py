@@ -687,27 +687,80 @@ def release_copy(src: str, dst: str, expect: str = ""):
 
 @app.function(image=image, cpu=RELEASE_CPU, memory=RELEASE_MEMORY, retries=0, timeout=RELEASE_TIMEOUT, volumes={RUNS_MOUNT: runs_volume},
               secrets=[modal.Secret.from_name(MIRROR_SECRET)])
-def run_release_publish(run, repo, card, message):
-    """kev.publish --private of a release checkpoint on the runs volume (`card`: the model card's text). The repo must be
-    private: kev.publish creates a missing one private and refuses one that is not. CPU only; HF_TOKEN from MIRROR_SECRET."""
+def run_release_publish(run, repo, card, message, public=False, replace=False):
+    """kev.publish of a release checkpoint on the runs volume (`card`: the model card's text). Private by default: kev.publish
+    --private creates a missing repo private and refuses one that is not. `public` (the approved release) drops --private;
+    `replace` passes --replace (the target revision then holds exactly this upload). CPU only; HF_TOKEN from MIRROR_SECRET."""
     import subprocess as sp
     import tempfile
     runs_volume.reload()
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f: f.write(card)
-    out = sp.run([sys.executable, "-m", "kev.publish", "--run", run, "--repo", repo, "--card", f.name, "--private", "--message", message],
-                 cwd="/root", env={**os.environ, "PYTHONPATH": "/root"}, check=True, capture_output=True, text=True)
+    cmd = [sys.executable, "-m", "kev.publish", "--run", run, "--repo", repo, "--card", f.name, "--message", message,
+           *([] if public else ["--private"]), *(["--replace"] if replace else [])]
+    out = sp.run(cmd, cwd="/root", env={**os.environ, "PYTHONPATH": "/root"}, capture_output=True, text=True)
     print(out.stdout[-4000:], out.stderr[-4000:], flush=True)
+    if out.returncode: raise RuntimeError(f"kev.publish exited {out.returncode}")
     from huggingface_hub import HfApi
-    info = HfApi().repo_info(repo, repo_type="model", files_metadata=False)
-    return {"repo": repo, "private": info.private, "commit": info.sha, "files": sorted(s.rfilename for s in info.siblings)}
+    info = HfApi().repo_info(repo, repo_type="model", files_metadata=True)
+    return {"repo": repo, "private": info.private, "commit": info.sha, "files": sorted(s.rfilename for s in info.siblings),
+            "lfs_sha256": {s.rfilename: s.lfs.sha256 for s in info.siblings if s.lfs}}
 
 
 @app.local_entrypoint()
-def release_publish(run: str, repo: str, card: str, message: str):
+def release_publish(run: str, repo: str, card: str, message: str, public: bool = False, confirm_public: str = "", replace: bool = False):
     """Upload a staged release checkpoint (--run /runs/release/<name>/checkpoint) to a PRIVATE Hub repo with --card as its
-    README, from a CPU container (the weights never leave Modal and Hugging Face)."""
+    README, from a CPU container (the weights never leave Modal and Hugging Face). An approved public release passes
+    --public --confirm-public <repo> (the repo named twice), usually with --replace after tagging the previous version."""
     if not run.startswith(f"{RUNS_MOUNT}/release/"): raise SystemExit(f"--run is a staged release checkpoint under {RUNS_MOUNT}/release/, not {run}")
-    print(json.dumps(run_release_publish.remote(run, repo, Path(card).read_text(encoding="utf-8"), message), indent=1), flush=True)
+    if public and confirm_public != repo: raise SystemExit(f"--public uploads to a public repo; repeat it as --confirm-public {repo}")
+    print(json.dumps(run_release_publish.remote(run, repo, Path(card).read_text(encoding="utf-8"), message, public, replace), indent=1), flush=True)
+
+
+RELEASE_VERIFY_DISK = 524288   # MiB (Modal's minimum explicit request): a fresh HF cache for a 27B release (51 GB) and, for a LoRA revision, its base (~55 GB)
+
+
+@app.function(image=image, gpu=GPU, cpu=4, memory=(32768, 131072), retries=0, timeout=3 * 3600, ephemeral_disk=RELEASE_VERIFY_DISK)
+def run_release_verify(jobs):
+    """What an anonymous user gets from a public release: no Modal secret, no kev-hf-cache volume, a fresh HF_HOME on the
+    scratch disk and no Hugging Face token. For each "<hub id[@rev]>@<suite>" job: kev.checkpoint's resolution of the id
+    (layout by the loader rule, head.pt temperature, weights and head sha256), then kev.benchmark on the suite's
+    development partition as a separate process. -> {"hf_home", "jobs": [{checkpoint (with the token it saw: None), report, rows}]}."""
+    import tempfile
+    home = tempfile.mkdtemp(prefix="hf-anon-", dir="/tmp")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("HF_") or k == "HF_HUB_DISABLE_PROGRESS_BARS"}
+    env.update(HF_HOME=home, HF_HUB_DISABLE_IMPLICIT_TOKEN="1", PYTHONPATH="/root", TRITON_CACHE_DIR=f"{home}/triton-cache")
+    resolve = ("import json, sys; from pathlib import Path; from huggingface_hub import get_token; from kev.checkpoint import Checkpoint; "
+               "from kev.suite import digest; ck = Checkpoint(sys.argv[1]); print(json.dumps({'requested': sys.argv[1], 'token': get_token(), "
+               "'path': ck.path, 'layout': 'full' if ck.full else 'lora', 'temperature': ck.meta.temperature, 'weights_sha256': ck.weights_sha256(), "
+               "'head_sha256': digest(ck.file('head.pt')), 'files': sorted(p.name for p in Path(ck.path).iterdir())}))")
+    from kev.suite import read_json
+    out = {"hf_home": home, "jobs": []}
+    for job in jobs:   # every step in a fresh process with the anonymous environment (nothing imported here saw the image's HF_HOME)
+        run, suite = job.rsplit("@", 1)
+        info = json.loads(subprocess.run([sys.executable, "-c", resolve, run], check=True, cwd="/root", env=env, capture_output=True, text=True).stdout.strip().splitlines()[-1])
+        print(json.dumps(info), flush=True)
+        dest = Path(tempfile.mkdtemp(prefix="bench-", dir="/tmp")) / "out"   # kev.benchmark refuses an existing --out
+        subprocess.run([sys.executable, "-m", "kev.benchmark", "--run", run, "--suite", f"/root/{suite}", "--out", str(dest), "--device", "cuda"],
+                       check=True, cwd="/root", env=env)
+        out["jobs"].append({"job": job, "checkpoint": info, "report": read_json(dest / "report.json"), "rows": read_json(dest / "rows.json")})
+    return out
+
+
+@app.local_entrypoint()
+def release_verify(jobs: str, out: str, gpu: str = "H200"):
+    """Anonymous verification of a public release (run_release_verify): --jobs "jaredpalmer/kev-27b@evals/external/semif-v1,..."
+    (comma-separated; `@rev` pins a revision: jaredpalmer/kev-27b@v1-lora@evals/...), each job's report.json + rows.json
+    written to <out>/<n>-<repo>/ and the resolutions to <out>/verify.json."""
+    from kev.suite import write_json
+    result = run_release_verify.with_options(gpu=gpu).remote([j.strip() for j in jobs.split(",") if j.strip()])
+    root = Path(out)
+    for i, job in enumerate(result["jobs"]):
+        d = root / f"{i}-{job['checkpoint']['requested'].replace('/', '_').replace('@', '_')}"
+        d.mkdir(parents=True, exist_ok=True)
+        write_json(d / "report.json", job.pop("report")); write_json(d / "rows.json", job.pop("rows"))
+        job["dir"] = str(d)
+    write_json(root / "verify.json", result)
+    print(json.dumps(result, indent=1), flush=True)
 
 
 @app.local_entrypoint()

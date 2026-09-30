@@ -11,6 +11,11 @@ tokenizer files, eval.json, training log (if found), and the model card (--card)
 name filled in. Requires `hf auth login`. With --private the repo is created private if missing and an existing repo
 that is not private is refused (kev.mirror.ensure_private), so a candidate never lands in a public repo. Full-weight
 shards are linked into the staging directory, not copied (modal_app.py::release_publish uploads a 27B from a CPU container).
+
+--replace makes the target revision hold exactly this upload: every file the upload does not carry (other than
+.gitattributes) is deleted in the same commit. A full-weight upload into a repo that still holds an adapter (or an adapter
+upload into one that holds backbone shards) is refused without it, because the loader rule (kev.checkpoint) would pick
+the stale layout.
 """
 import argparse, os, re, shutil, tempfile
 from pathlib import Path
@@ -24,6 +29,16 @@ FILES = ["head.pt", "tokenizer.json", "tokenizer_config.json", "chat_template.ji
 WEIGHTS = {False: ["adapter_config.json", "adapter_model.safetensors"], True: ["config.json", "model.safetensors.index.json"]}   # by Checkpoint.full
 
 
+def stale_layout(api, repo, revision, full):
+    """Files of the other checkpoint layout on the target revision (adapter files for a full-weight upload, backbone shards
+    for an adapter upload), sorted; [] for a missing branch or an empty repo."""
+    from huggingface_hub.utils import RevisionNotFoundError
+    try: files = api.list_repo_files(repo, repo_type="model", revision=revision)
+    except RevisionNotFoundError: return []
+    other = (lambda f: f in WEIGHTS[False]) if full else (lambda f: re.fullmatch(r"model.*\.safetensors", f) or f == "model.safetensors.index.json")
+    return sorted(f for f in files if other(f))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -33,6 +48,7 @@ def main():
     ap.add_argument("--private", action="store_true")
     ap.add_argument("--tag", help="create this Hub tag on the uploaded commit (versioned release, e.g. v0.2)")
     ap.add_argument("--revision", help="upload to this branch instead of main (created if missing); for candidates that must not replace the released weights")
+    ap.add_argument("--replace", action="store_true", help="delete every file of the target revision this upload does not carry, in the same commit (tag the previous version first)")
     a = ap.parse_args()
 
     checkpoint, run_name = Checkpoint(a.run), os.path.basename(a.run.rstrip("/"))
@@ -40,6 +56,10 @@ def main():
     api = HfApi()
     if a.private: ensure_private(api, a.repo)   # creates a missing repo private; refuses one that exists public
     else: api.create_repo(a.repo, repo_type="model", exist_ok=True, private=False)
+    stale = stale_layout(api, a.repo, a.revision, full)
+    if stale and not a.replace:
+        raise SystemExit(f"{a.repo}{'@' + a.revision if a.revision else ''} holds {stale}, the other checkpoint layout; the loader would pick it. "
+                         "Tag the previous version, then publish with --replace to delete it in the same commit")
 
     with tempfile.TemporaryDirectory() as tmp:
         shards = {p.name for p in checkpoint.shards()} if full else set()
@@ -73,7 +93,9 @@ def main():
             acc = {"acc": clean.get("acc", float("nan")), "ece": clean.get("ece", float("nan"))}
         msg = a.message or f"Upload {run_name} (base {base}; acc {acc.get('acc', float('nan')):.3f}, ECE {acc.get('ece', float('nan')):.3f})"
         if a.revision: api.create_branch(a.repo, branch=a.revision, repo_type="model", exist_ok=True)
-        info = api.upload_folder(folder_path=tmp, repo_id=a.repo, repo_type="model", commit_message=msg, revision=a.revision)
+        # delete_patterns="*": remote files not in this upload are deleted in the same commit (huggingface_hub keeps .gitattributes and every file being uploaded)
+        info = api.upload_folder(folder_path=tmp, repo_id=a.repo, repo_type="model", commit_message=msg, revision=a.revision,
+                                 delete_patterns="*" if a.replace else None)
         print(info)
         if a.tag:
             api.create_tag(a.repo, tag=a.tag, repo_type="model", tag_message=msg, exist_ok=False, revision=a.revision)

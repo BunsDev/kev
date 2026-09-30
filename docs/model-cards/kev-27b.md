@@ -1,18 +1,42 @@
 ---
 language: en
 license: apache-2.0
-library_name: peft
+library_name: transformers
 base_model: Qwen/Qwen3.8-27B
-base_model_relation: adapter
+base_model_relation: finetune
 pipeline_tag: text-classification
 tags:
   - decision-model
   - calibration
-  - lora
+  - full-weight-sft
+  - weight-averaging
   - multiple-choice
   - typesafe
   - qwen3.8
 datasets:
+  - deepmind/aqua_rat
+  - allenai/ai2_arc
+  - coastalcph/lex_glue
+  - allenai/cosmos_qa
+  - tau/commonsense_qa
+  - tasksource/esci
+  - openai/gsm8k
+  - nvidia/HelpSteer2
+  - nvidia/HelpSteer3
+  - hotpotqa/hotpot_qa
+  - AmazonScience/massive
+  - allenai/math_qa
+  - openlifescienceai/medmcqa
+  - pfb30/multi_woz_v22
+  - sentence-transformers/natural-questions
+  - allenai/openbookqa
+  - google-research-datasets/poem_sentiment
+  - allenai/qasc
+  - allenai/quartz
+  - allenai/social_i_qa
+  - stanfordnlp/snli
+  - ChilleD/StrategyQA
+  - allenai/winogrande
   - legacy-datasets/banking77
   - google/boolq
   - fancyzhx/ag_news
@@ -23,6 +47,8 @@ datasets:
   - fancyzhx/dbpedia_14
   - SetFit/amazon_reviews_multi_en
   - stanfordnlp/imdb
+  - bigcode/commitpackft
+  - davidheineman/consumer-finance-complaints-large
 metrics:
   - accuracy
   - brier_score
@@ -31,97 +57,231 @@ model-index:
   - name: Kev-27B
     results:
       - task: { type: text-classification, name: typed decision, out-of-domain, locked test }
-        dataset: { type: mixed, name: "transfer-v4 test (read once)" }
+        dataset: { type: mixed, name: "transfer-v4 test (locked)" }
         metrics:
-          - { type: accuracy, value: 0.896 }
-          - { type: brier_score, value: 0.160 }
-      - task: { type: text-classification, name: typed decision, out-of-domain, fresh panel }
-        dataset: { type: mixed, name: "transfer-r6 test (1,260 questions, read once)" }
+          - { type: accuracy, value: 0.8887 }
+          - { type: brier_score, value: 0.154 }
+      - task: { type: text-classification, name: held-out datasets, test }
+        dataset: { type: mixed, name: "breadth-v1 test (14 held-out datasets, 4 excluded as registered)" }
         metrics:
-          - { type: accuracy, value: 0.863 }
-      - task: { type: text-classification, name: typed decision (choice / noul / score) }
-        dataset: { type: mixed, name: "decision-v7 test (read once)" }
+          - { type: accuracy, value: 0.832 }
+      - task: { type: text-classification, name: held-out task families, test }
+        dataset: { type: mixed, name: "tasksource-heldout-v1 test (24 held-out families, 7 excluded as registered)" }
         metrics:
-          - { type: accuracy, value: 0.870 }
+          - { type: accuracy, value: 0.795 }
 ---
 
 # Kev-27B
 
-Kev-27B is a **decision model**: one document (the *state*) and a set of typed questions in, a probability distribution per question out, in one forward pass. No text generation. It is a LoRA adapter plus a pointer head on `Qwen/Qwen3.8-27B` (revision `1d4bf0f2`), serving TypeSafe's public `/v1/systemone` contract, like every Kev.
+This is **Kev-27B v2**, released 2026-09-30 on the `main` branch of `jaredpalmer/kev-27b`.
 
-**The most accurate and best-calibrated Kev.** On the locked out-of-domain test it scores **0.896** with served Brier **0.160**, against Kev-9B's 0.852 / 0.224; coverage at ≤ 5 % error, the share of decisions that can be automated at a 5 % error budget, is 0.835 against 0.645. It keeps questions buried in long states that the smaller Kevs lose (0.833 against 0.556 on a fresh panel) and answers MMLU-Pro at 0.665 against 0.515.
+> **Previous version.** Kev-27B v1, a rank-16 LoRA adapter on the same base (trial `r6-27b-v2/01-trial-1`, T 1.38), stays on the Hub at
+> [`jaredpalmer/kev-27b@v1-lora`](https://huggingface.co/jaredpalmer/kev-27b/tree/v1-lora). Its headline numbers: locked transfer-v4 test **0.896**
+> with served Brier **0.160**, buried questions in long states 0.833, MMLU-Pro 0.665. Its card is the README at that tag
+> (and `docs/model-cards/kev-27b.md` in the [Kev repository](https://github.com/jaredpalmer/kev) before 2026-09-30). Below, "Kev-27B v1" is that checkpoint; every comparison is against it.
+
+Kev-27B v2 is a **decision model**: one document (the *state*) and a set of typed questions in, a probability distribution per question out, in one forward pass. No text generation. It serves TypeSafe's public `/v1/systemone` contract, like every Kev. It is a full-weight checkpoint of `Qwen/Qwen3.8-27B` (revision `1d4bf0f2`) plus a pointer head, and it is made in two steps:
+
+1. **Full-weight SFT.** Every backbone weight of Qwen3.8-27B was fine-tuned for one epoch on `sft-v2-r22`, a private corpus of 145,840 decision records (round 22).
+2. **Blend toward Kev-27B v1.** The SFT backbone was averaged with Kev-27B v1's backbone: 0.85 × SFT + 0.15 × Kev-27B v1, where v1's LoRA adapter was merged in fp32. The SFT's pointer head was kept (round 23).
+
+It is served at temperature **1.32**. That value was fitted on held-out datasets that neither parent trained on.
+
+**What it is better at than Kev-27B v1.** The comparisons below were registered before the reads, and every paired interval is a 95 % record-clustered bootstrap.
+- Held-out datasets (breadth-v1 test): **+1.2 pp [+0.3, +2.2]**.
+- Held-out task families (tasksource-heldout-v1 test): **+5.3 pp [+3.7, +6.8]**.
+- Kev's skill, developer-tooling and real-document suites together (hard-v1, devtools-v1 and documents-v1 test): **+8.9 pp [+7.5, +10.3]**.
+- On the locked out-of-domain test it reaches **0.8887** accuracy with served Brier **0.154**. The bar was 0.886. Kev-27B v1 scores 0.8963 / 0.160.
 
 **Read this first.**
-- **The base is post-trained, not a base model.** Every other Kev starts from a `-Base` checkpoint. `Qwen/Qwen3.8-27B` is Qwen's instruction-tuned release; what it was post-trained on (including any distillation from other models) is Qwen's and is not known to us. Comparisons with Jev or with the smaller Kevs are therefore not controlled comparisons of the method.
-- **One registered gate was overridden.** Before training, the untrained base had to reach MMLU-Pro ≥ 0.65 on `transfer-v9`; it scored 0.635 and the project owner overrode the gate (recorded in `PLAN_27b.md`, A2, at git tag `research-archive-2026-09-24`). The trained model's own MMLU-Pro is 0.665.
-- **It needs a data-centre GPU.** bf16 weights are 55 GB resident (about 66 GB with the serving buffers); one B200, H200 or H100 80 GB. There is no Mac path.
+- **The confirmation is weaker evidence than a fresh one.** Round 23 was designed after round 24's confirmation had been read. Round 24's candidate (the unblended SFT) missed the locked bar and was worse on long contracts, and the blend was chosen as a response. Round 23 was then confirmed on the same test partitions and the same locked transfer-v4 that round 24 had read. Its bars were fixed before any round-23 read, one candidate was confirmed, and each read was made once. Even so, these partitions were no longer untouched for this question (`PLAN.md`, "Round 23 (registered)", "Reuse of the test partitions").
+- **It is not better than Kev-27B v1 on short states.** Locked transfer-v4: −0.8 pp [−2.0, +0.5] against v1. On the registered short-state panel (without `emotion`) it is −0.9 pp [−2.0, +0.1]. On the whole transfer-r3 test panel, `emotion` included, it is −2.1 pp [−3.5, −0.8].
+- **It is worse than Kev-27B v1 on long contracts.** On the CUAD contracts of longdoc-v1 test it scores 0.874 against 0.890 (−1.6 pp [−3.0, −0.3]), and its ECE is 0.053 against 0.007. In every length bucket up to 64k tokens its ECE is 2 to 4 times v1's. On development its accuracy was level (+0.8 pp [−0.2, +1.8]), but its ECE was already 0.097 against 0.063. The blend barely moved this: round 24's unblended SFT was −1.8 pp with ECE 0.055 on the same test.
+- **Several headline suites are in distribution.** hard-v1, devtools-v1 and documents-v1 train partitions are in its training data, and the ood / agents / guardrails suites share generators with its training components. Gains there are held-out items of trained families, not transfer.
+- **The base is post-trained.** `Qwen/Qwen3.8-27B` is Qwen's instruction-tuned release, and what Qwen trained it on is not known to us.
+- **It needs a data-centre GPU.** The bf16 weights are 51 GB (65.5 GB resident when served); one B200, H200 or H100 80 GB. There is no Mac path.
 
-- Hub: `jaredpalmer/kev-27b` (trial `r6-27b-v2/01-trial-1`; registration and every read in `PLAN_27b.md`, "B1 v2", at git tag `research-archive-2026-09-24`). Numbers below: `runs/release/kev-27b-v2.json`.
+## Confirmation (registered, round 23)
 
-## Results (as served: each checkpoint at its own fitted temperature)
+Round 23 had six candidate blends. Five passed the development rule, and this checkpoint (`27b-k-w85`) ranked first. It was then confirmed with round 24's stages, identical bars, one read each ([`experiments/rounds/r23.json`](https://github.com/jaredpalmer/kev/blob/main/experiments/rounds/r23.json); verdicts in `runs/r23-verdict/`).
+- Every delta is paired against Kev-27B v1 (then the released Kev-27B), in percentage points.
+- v2 is served at its pool temperature 1.32 and v1 at its shipped 1.38.
+- The exclusions were registered before any read and remove the same rows from both sides:
+  - breadth-v1: without `routerbench`, `cfcolor`, `humicroedit` and `chessbench`;
+  - tasksource-heldout-v1: without seven families, listed privately;
+  - devtools-v1: without `flakeflagger` and `commitpackft_type`.
 
-| | **Kev-27B (T = 1.38)** | Kev-9B (T = 2.30) | Jev |
+| stage / criterion (panel, questions) | Kev-27B v2 | Kev-27B v1 | Δ [95 %] | verdict |
+|---|---|---|---|---|
+| tests: breadth-v1 test accuracy, lower bound > 0 (2,489) | 0.832 | 0.820 | +1.2 [+0.3, +2.2] | pass |
+| tests: tasksource-heldout-v1 test accuracy, lower bound > 0 (2,024) | 0.795 | 0.743 | +5.3 [+3.7, +6.8] | pass |
+| tests: pooled hard-v1 + devtools-v1 + documents-v1 test accuracy, lower bound ≥ −1 (2,795) | 0.889 | 0.800 | +8.9 [+7.5, +10.3] | pass |
+| **locked: transfer-v4 locked accuracy ≥ 0.886 (656)** | **0.8887** (583) | 0.8963 (588) | −0.8 [−2.0, +0.5] | pass |
+| locked: served Brier ≤ 0.165 (656) | 0.154 | 0.160 | – | pass |
+| bf16 serving check: max \|Δp\| ≤ 0.03 and ≤ 1 flip in 280, plus 8k / 32k / 64k states | see Serving | – | – | pass |
+
+Report-only test reads (same exclusions):
+
+| panel (questions) | Kev-27B v2 | Kev-27B v1 | Δ [95 %] |
 |---|---|---|---|
-| **locked test**, out-of-domain accuracy / Brier (transfer-v4) | **0.896 / 0.160** | 0.852 / 0.224 | – |
-| locked test, coverage at ≤ 5 % error | **0.835** | 0.645 | – |
-| **fresh panel**, out-of-domain accuracy (transfer-r6 test, read once) | **0.863** | 0.842 | – |
-| locked test, in-distribution accuracy (decision-v7) | 0.870 | 0.874 | – |
-| out-of-domain accuracy / Brier (transfer-v4 dev) | 0.848 / 0.229 | 0.822 / 0.264 | 0.857 / 0.211 |
-| buried questions in long states (longstate-v3, fresh) | **0.833** | 0.556 | – |
-| MMLU-Pro (transfer-v9 dev, 10-way) | 0.665 | 0.515 | 0.840 |
-| unknowable items answered at ≥ 0.9 (lower is better) | 0.00 | 0.00 | 0.09 |
-| held-out policy structures, both siblings correct | 0.891 | 0.828 | 0.86 |
-| real documents (documents-v1 dev, CFPB complaints; never trained on) | 0.862 | 0.833 | 0.868 |
-| SemIf (144 authored decisions) | 0.972 | 0.910 | – |
-| scienthoon (873 support tickets) | 0.796 | 0.755 | – |
-| WANLI-v2 (1,002 NLI pairs) | 0.745 | 0.740 | – |
-| TypeSafe (89 answered rows) | 0.865 | 0.820 | – |
+| hard-v1 test (1,088) | 0.918 | 0.749 | +16.9 [+14.2, +19.8] |
+| devtools-v1 test, gated sources (771) | 0.825 | 0.789 | +3.6 [+1.3, +5.9] |
+| documents-v1 test (936) | 0.908 | 0.869 | +4.0 [+2.1, +5.9] |
+| documents-v2, private held-out test (953) | 0.921 | 0.881 | +4.0 [+2.0, +6.1] |
+| breadth-v1 test, all 14 datasets (3,089) | 0.757 | 0.748 | +0.8 [−0.1, +1.8] |
+| longdoc-v1 test, CUAD contracts (2,194) | 0.874 | 0.890 | −1.6 [−3.0, −0.3] |
+| longdoc-v1 test, generated agreement bundles (2,400) | 1.000 | 1.000 | – |
 
-The scienthoon suite was retired as a Kev evaluation on 2026-09-27: its tickets are templated, and one of its three questions (`priority`) depends on an organisational rule that the text does not state (`PLAN.md`). The scienthoon figures on this card are kept as the record of how the release was decided.
+On CUAD test v2 loses accuracy at every length, and its ECE is 2 to 4 times v1's in every bucket (accuracy / ECE):
 
-Paired against Kev-9B (record-clustered bootstrap, 95 %): transfer-r6 test +2.1 pp [+0.3, +3.8]; longstate-v3 buried questions +27.7 [+23.1, +32.5]; SemIf +6.2 [+2.8, +10.4]; scienthoon +4.1 [+1.9, +6.3]; real documents +2.9 [+0.7, +5.3]; WANLI-v2 +0.5 [−1.6, +2.6].
+| CUAD test, state length (questions) | Kev-27B v2 | Kev-27B v1 |
+|---|---|---|
+| under 8k tokens (867) | 0.874 / 0.059 | 0.900 / 0.025 |
+| 8k-16k (443) | 0.880 / 0.052 | 0.892 / 0.028 |
+| 16k-32k (442) | 0.873 / 0.061 | 0.882 / 0.019 |
+| 32k-64k (442) | 0.867 / 0.060 | 0.876 / 0.014 |
+| all lengths (2,194) | 0.874 / 0.053 | 0.890 / 0.007 |
 
-How it was selected: two seeds were trained under a rule registered before any training (`PLAN_27b.md`, B1 v2, at tag `research-archive-2026-09-24`): development criteria (transfer-v4 ≥ 0.842, MMLU-Pro ≥ 0.65, unknowable share ≤ 0.05, held-out pairs ≥ 0.75, long states ≥ Kev-9B + 10 pp, pooled externals ≥ Kev-9B), then one read of two fresh panels against Kev-9B, then one locked read (≥ 0.862, Brier ≤ 0.237). Seed 1 missed MMLU-Pro (0.630); seed 2 passed every step and is this checkpoint. Three earlier 27B trials (round 6) had missed the development rule by less than a point; their record is in `PLAN.md` at tag `research-archive-2026-09-24` ("Round 6").
+The development rule's CUAD accuracy guard (lower bound ≥ −2 pp) would not hold on test (−3.0), as it did not for round 24's unblended SFT (−1.8 pp [−3.2, −0.5], ECE 0.055). Both are report-only at this stage and change no verdict. The generated bundles are at ceiling for every system.
+
+On the ten breadth-v1 datasets that were gated, the gain holds on test. Over all fourteen it is smaller (+0.8 pp), and its interval includes zero. The four excluded datasets were moved to report-only by the 2026-09-27 audit, before round 23.
+
+## Breadth index on test (against Jev and AutoJev)
+
+This is the chance-corrected index of the community Decision Index, computed over breadth-v1's 14 held-out datasets in five areas (`scripts/breadth_report.py`, `runs/r23-breadth-report/`). Jev (through the AI Gateway) and AutoJev-27B (by its own server) were read once, on the same test items, in round 24. Their rows are reused here and were not read again.
+
+| | Kev-27B v2 | Kev-27B v1 | Jev | AutoJev-27B |
+|---|---|---|---|---|
+| index (95 % CI) | **52.3** [49.2, 55.4] | 50.2 [47.0, 53.2] | 54.0 [51.2, 57.0] | 50.0 [47.0, 53.3] |
+
+Against Kev-27B v1 the index is +2.1 [−0.4, +4.6]. Against Jev it is 1.8 points lower on the point estimates; no paired interval against Jev was registered. Round 24's unblended SFT scored 53.7 on the same items, so the blend gave back about 1.4 index points.
+
+## Results as served (whole suites)
+
+The table below uses whole suites (minus two duplicated CodeReviewer ids), with no exclusions. Each model is at its own served temperature. Numbers come from `runs/release/kev-27b-r23.json` (`scripts/release_numbers.py --release kev-27b-r23`).
+
+| | **Kev-27B v2 (T = 1.32)** | Kev-27B v1 (T = 1.38) |
+|---|---|---|
+| **locked test**, out-of-domain accuracy / Brier (transfer-v4) | **0.889 / 0.154** | 0.896 / 0.160 |
+| locked test, coverage at ≤ 5 % error | **0.875** | 0.835 |
+| out-of-domain accuracy / Brier (transfer-v4 development) | 0.851 / 0.218 | 0.848 / 0.229 |
+| short states, transfer-r3 test (spent panel, `emotion` included) | 0.858 | 0.879 |
+| trained sources, decision-v7 development (read after release, report only) | 0.865 | 0.866 |
+| MMLU-Pro (transfer-v9 development, 10-way) | 0.675 | 0.665 |
+| unknowable items answered at ≥ 0.9 (lower is better) | 0.00 | 0.00 |
+| breadth-v1 development, all 14 datasets | 0.757 | 0.745 |
+| hard-v1 development / test | 0.912 / 0.918 | 0.733 / 0.749 |
+| devtools-v1 development / test, all sources | 0.756 / 0.790 | 0.702 / 0.711 |
+| documents-v1 development / test (CFPB complaints) | 0.916 / 0.908 | 0.862 / 0.869 |
+| SemIf (144 authored decisions) | 0.965 | 0.972 |
+| WANLI-v2 (1,002 NLI pairs) | 0.756 | 0.745 |
+| TypeSafe (89 answered rows) | 0.854 | 0.865 |
+
+SemIf, WANLI-v2 and TypeSafe are report-only; the audit found them unsound as a gate. scienthoon, the support-ticket suite on which Kev-27B v1 was selected, was removed as an evaluation on 2026-09-27, before round 23, so v2 has no scienthoon read. Its SFT parent (round 22's final checkpoint) was 5.5 pp below v1 there [−7.8, −3.2] (`PLAN.md`, "Round 22 result", "scienthoon removed").
+
+**Out-of-domain component suites** (development, report-only). These suites are held-out domains of generators that also produced training components, so they are not independent transfer tests. Accuracy / ECE against Kev-27B v1:
+- ood-v2 (4,988 questions): 0.956 / 0.020 against 0.944 / 0.044.
+- agents-ood-v1 (2,084): 0.988 / 0.032 against 0.967 / 0.137.
+- guardrails-ood-v1 (4,949): 0.984 / 0.010 against 0.944 / 0.079.
+
+## Calibration
+
+`head.pt` carries temperature **1.32** (1.3195). `scripts/calibrate_checkpoint.py` fitted it on round 23's registered pool, and the fit reproduces the round's own pool fit exactly:
+- transfer-r3's calibration partition, eight held-out public sources, 448 questions;
+- transfer-v9 development MMLU-Pro, 200 questions;
+- minus any transfer-v4 development duplicates (none);
+- 648 questions in all.
+
+The script refuses rows that share data with the checkpoint's training, and it found none. The pooled T has a 90 % bootstrap interval of [1.20, 1.45]. Out of fold, the pool's ECE goes from 0.048 raw to 0.038 (5 folds, group-disjoint); the two intervals overlap. `KEV_TEMPERATURE=1.0` gives the raw logits.
+
+As served, test-partition ECE against Kev-27B v1:
+- breadth-v1, gated datasets: 0.015 against 0.013;
+- tasksource-heldout-v1: 0.049 against 0.051;
+- pooled hard / devtools / documents-v1: 0.014 against 0.027.
+
+Served at the ends of the T interval, breadth ECE rises to 0.026 at T 1.20, and tasksource-heldout ECE to 0.067 at T 1.45 (`runs/r23-verdict/27b-tests-t-interval.json`). The two panels pull in opposite directions, so no single T in the interval is best for both.
 
 ## Serving (bf16)
 
-Served with the adapter folded into the bf16 weights (one rounding of W + delta), fused Qwen3.5 kernels, CUDA graphs and batching across concurrent requests (`kev.serve` on CUDA). Measured with `scripts/serving_bench.py` on 200 decision-v7 development records (280 questions): `runs/fused-27b-h200`, `runs/fused-27b-h200-iso`, `runs/fused-27b-b200`, and `runs/fused-27b-h100` / `runs/fused-27b-b300` / `runs/fused-27b-rtx6000` for the other GPUs tried. The release measurement, with the adapter unmerged and no batching, is `runs/serving-27b-h200`.
+The serving check follows round 24's protocol: `scripts/serving_bench.py` on an H200, 200 decision-v7 development records (280 questions), with fused kernels and CUDA graphs. Reports: `runs/serving-27b-r23/report.json`, `runs/serving-27b-r23-long/report.json`.
 
-| | Kev-27B | Kev-9B (H100, reference) |
-|---|---|---|
-| served vs the evaluation path (bf16 backbone, fp32 adapter unmerged), max / mean \|Δp\| | 0.0087 / 0.0012, 0 answer flips (B200: 0.0163, 1 flip) | – |
-| isolation: question alone vs the full request, max \|Δp\| | 0.0040, 0 flips | 0.005, 0 flips |
-| isolation: question alone vs next to an unrelated probe question, max \|Δp\| | 0.0038, 0 flips | 0.023, 0 flips |
-| model time, new state (2 questions short / 6 questions short / 5 questions on 2,200 tokens) | H200 39.6 / 65.5 / 267.9 ms; B200 31.8 / 46.5 / 178.0 ms | – |
-| model time, cached state (same requests) | H200 22.3-71.9 ms; B200 17.4-52.1 ms | – |
-| requests/s, decision-v7 development records at 1 / 8 / 32 / 64 concurrent clients | H200 21.6 / 31.7 / 36.4 / 39.7; B200 27.7 / 43.9 / 51.2 / 57.3 | – |
-| GPU memory resident (weights + batching buffers) / load time | 65.5 GB / 19.2 s (H200, cached weights) | – |
+| | Kev-27B v2 |
+|---|---|
+| served (CUDA graphs, bf16) vs the fp32 evaluation path, max \|Δp\|, flips | 0.0223, 0 flips |
+| isolation: question alone vs the full request, max \|Δp\| | 0.0039, 0 flips |
+| long states, served vs benchmark, max \|Δp\| at 8k / 32k / 64k tokens | 0.0064 / 0.0095 / 0.0017, 0 flips |
+| model time, new state / cached state at 64k tokens | 9.4 s / 733 ms |
+| peak GPU memory at 64k tokens | 87.1 GB |
+| GPU memory resident / load time | 65.5 GB / 17.6 s (cached weights) |
+| requests/s, decision-v7 development records at 1 / 64 concurrent clients | 21.1 / 36.4 |
 
-Under load the model is compute-bound: a B200 serves 57.3 requests/s at 64 concurrent clients for about the H200's cost per request, with lower latency. An H100 80 GB serves 35.9 requests/s at 64 clients, also at about the same cost per request (`runs/fused-27b-h100`); an RTX PRO 6000 serves it slower and at a higher cost per request (`runs/fused-27b-rtx6000`). On the H100, B200, B300 and RTX PRO 6000 one answer in 280 changed against the evaluation path, within the release tolerance below.
-
-Isolation (a question's answer must not depend on which other questions are asked with it) is exact in fp32 arithmetic for every Kev; in bf16 it holds to the precision band above. The release tolerance was registered before this measurement: max \|Δp\| ≤ 0.03 and at most one flip in 280 questions for both comparisons.
+The serving context is 65,536 tokens of state, plus at least 8,192 per question branch. Training states were capped at 32,768 tokens, so 32k-64k inputs have been evaluated (longdoc-v1) but not trained on.
 
 ## How it was built
 
-- **Base model**: `Qwen/Qwen3.8-27B` (revision `1d4bf0f2`, Apache-2.0), a hybrid of Gated DeltaNet and full-attention layers like the Qwen3.5 family, so questions run as separate causal rows continuing from the shared state (`kev/model.py`), and the frozen backbone is held in bf16 (`--weights_dtype bf16`; fp32 does not fit next to the optimiser on one GPU).
-- **Recipe** (one epoch, lr 5e-5, LoRA r=16 on attention, MLP and DeltaNet projections, bf16, H200): `decision-v7` plus the dates / unknowable records of the 2026-09-21 delta, 1,400 long-state records (a real question buried among 1k-6k tokens of unrelated records) and soft targets on ambiguous records with MNLI kept hard (`evals/round6/b1v2/`, 15,401 records). No Jev outputs were used for training.
-- **Calibration**: `head.pt` carries temperature 1.38, fitted on the trial's in-distribution development rows (out-of-fold ECE 0.039 → 0.022); `KEV_TEMPERATURE=1.0` gives the raw logits.
+- **Base model**: `Qwen/Qwen3.8-27B` (revision `1d4bf0f2`, Apache-2.0). It is a hybrid of Gated DeltaNet and full-attention layers, so questions run as separate causal rows continuing from the shared state (`kev/model.py`).
+- **SFT data**: `sft-v2-r22`, private; only its manifest is public (`evals/sft-v2-r22/manifest.json`). The train partition has 145,840 records and 337,130 questions, with states of at most 32,768 tokens. Components:
+  - `sft-v1`, 78,786 records. It holds Kev-27B v1's own training set (decision-v7 with soft targets, the dates / unknowable delta and buried long states), the hard-v1, devtools-v1 and documents-v1 train partitions, and 24 public datasets capped at 500 train records each. It also holds the open-weight-generated synthetic families: long documents, tool routing, retrieval, intent, rubric judging, abstention twins and numeric reasoning.
+  - `tasksource-v1`, 24,000 records: 119 commercially licensed task families; list private.
+  - `longify`, 3,200 records: sft-v1 train states embedded in 8k-32k documents, exact labels.
+  - `longdoc`, 7,617 records: code-assembled long documents with code labels.
+  - `ood`, 7,312; `tone`, 7,544 (calm / frustrated / angry minimal pairs); `injection`, 2,699; `agents`, 4,875 (agent-session logs); `guardrails-pii`, 4,152; `guardrails-grounding`, 5,655.
+- **How the data was made**:
+  - Generated text and labels come from open-weight teachers (GLM-5.3, DeepSeek-V4-Pro, Inkling, Mistral Large 3, gpt-oss-120b, MiMo-V2.6-Pro) or from code.
+  - documents-v1's labels come from open-weight teachers, filtered by closed-model judges and adjudication.
+  - No Jev outputs were used.
+  - Every record was screened against every evaluation partition of every frozen Kev suite, the private evaluation mirror, JevBench's public items and the eval-only suites.
+- **SFT settings** (round 22, `experiments/round22/lr2e6.json`):
+  - `kev.train --full_ft 1`, one epoch on 8 H200 (FSDP2, fp32 master weights and moments, bf16 backbone);
+  - learning rate 2e-6 (head 1e-4), weight decay 0.01, `--batch 8 --accum 2` with length-balanced micro-batches;
+  - each state run once with its questions branching from it (`--shared_prefix`);
+  - none-of-the-above pairs (p 0.25) only on states of at most 8,192 tokens, and at most 40,960 padded tokens per pass;
+  - seed 0.
+- **Blend** (round 23, `scripts/interpolate_checkpoint.py --toward`):
+  - Each backbone tensor is 0.85 × SFT + 0.15 × Kev-27B v1, computed in fp32 and rounded once to bf16.
+  - Kev-27B v1 (`jaredpalmer/kev-27b@01b81998`, now tag `v1-lora`, a rank-16 LoRA) enters as base + peft's `get_delta_weight` on its 496 adapted tensors, unrounded.
+  - The pointer head is the SFT's.
+  - Blended weights sha256 `d27af6ab…` (`interpolation.json` in this repository).
+- **Hub relation**: `finetune`. Every weight derives from fine-tunes of the one base; the Hub's `merge` relation is for merges of several listed base models, and Kev-27B v1 is itself an adapter of the same base.
 
 ## Known limits
 
-- Knowledge is still the gap to Jev: MMLU-Pro 0.665 against 0.840.
-- The long-state gain is on synthetic buried states; on real long complaint narratives it scores 0.862 (Jev 0.868) without having trained on them.
-- One seed of two passed the MMLU-Pro criterion (0.665 and 0.630 on 200 questions); that criterion is at the resolution limit of its 200 questions.
-- In-distribution accuracy is not higher than Kev-9B's (0.870 against 0.874 on the locked test).
+- It is not better than Kev-27B v1 on short states, and it is worse and overconfident on long contracts (see "Read this first"). For contract review, refit the temperature on your own documents, or keep v1 (`jaredpalmer/kev-27b@v1-lora`).
+- Knowledge is still set by the base. MMLU-Pro is 0.675, against Jev's 0.840 on the same items.
+- Its training data covers hard-v1, devtools-v1 and documents-v1, so the large gains there are in distribution.
+- The development rule's closest call was short-state accuracy, whose lower bound was −1.95 pp against a −2 pp bar.
+- Its temperature has a 90 % interval of ±0.12, which moves test ECE by up to 0.02 (Calibration).
+
+## Intended use
+
+Kev-27B v2 is meant for typed decisions over documents up to 64k tokens: classification, routing, extraction choices and judging, served behind TypeSafe's System One contract, where calibrated probabilities feed thresholds and review queues.
+- Freeze thresholds on your own labelled workload. For contract review in particular, refit the temperature on your own documents (`kev.calibrate`).
+- It is not a generative model or a chat model. It does not replace a human decision where errors are costly.
 
 ## Use
 
 ```bash
-uv run --extra serve python -m kev.serve --run jaredpalmer/kev-27b --port 8008      # CUDA, bf16 + CUDA graphs by default; ~55 GB
+uv run --extra serve python -m kev.serve --run jaredpalmer/kev-27b --port 8008          # CUDA, bf16 + fused kernels + CUDA graphs; 51 GB of weights, 65.5 GB resident, 64k context
+uv run --extra serve python -m kev.serve --run jaredpalmer/kev-27b@v1-lora --port 8008  # the previous version (LoRA adapter on the base)
 ```
 
-Or deploy your own endpoint with the `kev-deploy` skill (`KEV_MODEL=jaredpalmer/kev-27b modal deploy kev_serve.py`; B200, falling back to H200 and H100). Any TypeSafe-compatible client works: `TypeSafeClient(api_key="local", base_url="http://127.0.0.1:8008", model="kev-latest")`.
+Any TypeSafe-compatible client works: `TypeSafeClient(api_key="local", base_url="http://127.0.0.1:8008", model="kev-latest")`.
 
 ## License
 
-Apache-2.0 for the adapter and head; the Qwen3.8-27B base is Apache-2.0; datasets carry their own licenses.
+Apache-2.0 for the weights and head. The Qwen3.8-27B base is Apache-2.0. The training data carries its own licences, recorded per source in the manifests:
+- Of sft-v1's 24 public datasets, four are share-alike: ARC (CC-BY-SA-4.0), HotpotQA (CC-BY-SA-4.0), Natural Questions (CC-BY-SA-3.0) and SNLI (CC-BY-SA-4.0). The other twenty are CC-BY-4.0, MIT or Apache-2.0.
+- Kev-27B v1's own training set (decision-v7's ten public sources) is carried over unchanged, with the terms listed on v1's card.
+- The CFPB complaints (documents-v1) are US government works.
+- devtools-v1's sources are licence-checked; CodeReviewer diffs are kept only from permissively licensed projects.
+- The generated components use open-weight teachers whose licences leave their outputs unrestricted. One of them, GLM-5.3, has an MIT-style licence with a condition on very large model-as-a-service operators.
+
+The corpus itself is private. Its manifests record each source's licence, revision and screens.
+
+## Provenance
+
+- Checkpoint: round 23 arm `27b-k-w85` on the `kev-runs` volume (`/runs/r23-wise/27b-k-w85/checkpoint`). Release copy: `/runs/release/kev-27b-r23/checkpoint`, whose weights sha256 is equal to the source's. Its `head.pt` has sha256 `7968f17b…` and carries T 1.32.
+- Hub: `jaredpalmer/kev-27b`, `main` (published 2026-09-30 from the release copy by a CPU container, in one commit that also removed v1's adapter files, so the loader takes the full-weight path). The Hub's file hashes give the same weights and `head.pt` hashes. Before release it was reviewed privately as `jaredpalmer/kev-27b-v2-candidate` (commit `0dd33bcc`, the same files), where a load with a token reproduced round 23's semif-v1 read: 252 of 252 rows had identical logits before the temperature. Kev-27B v1 is at tag `v1-lora` (commit `01b81998`).
+- Verification: loaded anonymously from the public repository (no token, a fresh cache) on an H200, it reproduced round 23's semif-v1 and transfer-v4 development reads row for row: 252 of 252 and 764 of 764 rows had identical logits before the temperature, with T 1.32 applied. `jaredpalmer/kev-27b@v1-lora` still loads v1's adapter at T 1.38 (`runs/release/kev-27b-r23-published.json`, `runs/rel27-public/`).
+- Internal release id: `kev-27b-r23`. The name `kev-27b-v2` already belongs to v1's records (its registration was "B1 v2").
+- Evidence: `runs/release/kev-27b-r23.json`, `runs/release/kev-27b-r23-staging.json` (copy, hashes, temperature fit and private Hub verification), `runs/release/kev-27b-r23-published.json` (public upload and verification), `runs/r23-readout/`, `runs/r23-verdict/` and `PLAN.md` ("Round 22", "Round 23", "Round 24", "Released: Kev-27B v2").

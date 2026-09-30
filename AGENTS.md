@@ -233,7 +233,7 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   access (`hf auth login` / `HF_TOKEN`; Modal images already carry a locally fetched copy under `evals/`) and raises a
   PermissionError naming the repo for everyone else; `tests/test_conventions.py` fails if such a suite tracks a partition.
 - Modal (default for anything beyond smoke): `modal_app.py`; `uv run modal run modal_app.py::{smoke,study,pull,resume,
-  locked_test,evaluate,base_probe,benchmarks,smoke_base,anchors,sft_probe,gpu_tests,interpolate,release_copy,release_publish}`; `uv run modal deploy modal_app.py` once so studies
+  locked_test,evaluate,base_probe,benchmarks,smoke_base,anchors,sft_probe,gpu_tests,interpolate,release_copy,release_publish,release_verify}`; `uv run modal deploy modal_app.py` once so studies
   survive a disconnect. Image = `uv_sync` of pyproject/uv.lock (Linux torch wheel is CUDA) + fla, triton>=3.7.1 and the
   causal-conv1d wheel (`--no-deps`, or it reinstalls torch's triton 3.4) + `kev/` + `evals/` + `tests/`; Volumes
   `kev-hf-cache` (HF_HOME) and `kev-runs` (trial outputs, pulled to `runs/<study>` then ranked by
@@ -248,8 +248,8 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   saved result files. Style lives in `scripts/chartstyle.py` (Geist type, Vercel color tokens, direct labels, no legends, one label/plot/value lane per bar set);
   new figures should import it rather than set their own rcParams. `kev.plot` (loss curves from train logs) is a debugging aid, not a README figure.
 - Current family (2026-09-21, all Qwen3.5 + the dates/unknowable delta): `jaredpalmer/kev-9b` (`night2-9b-du/00-trial-0`), `jaredpalmer/kev-4b` (`r10-skills/00-trial-0` from the round-10 release: the round-8 checkpoint `r8-small/00-trial-0` (the night2 checkpoint + one epoch on `documents-v1` train) + one epoch on `hard-v1` + `devtools-v1` train; round-8 weights at tag `r8-documents-release`, night2 at `night2-du-release`;
-  Qwen3 weights at tag `qwen3`), `jaredpalmer/kev-0.8b` (`r15-08b/00-trial-0` from the round-15 release: `night2-08b-du2/00-trial-0` + one epoch on `documents-v1` + `hard-v1` + `devtools-v1` train together, replay 6000; previous at tag `night2-du-release`), `jaredpalmer/kev-27b` (`r6-27b-v2/01-trial-1`, from the release study "B1 v2" in `PLAN_27b.md` at tag `research-archive-2026-09-24`; base `Qwen/Qwen3.8-27B` rev `1d4bf0f2`, post-trained, not `-Base`; bf16 backbone only (55 GB of weights, ~66 GB resident when serving), so B200, H200 or H100 80 GB, no Mac path; the kev-deploy skill defaults it to B200, then H200, then H100; served merged + fused like the others: `LoadOptions.fused` folds the adapter into the bf16 backbone, `runs/fused-27b-*`). Pre-delta v7 checkpoints at tag `v7-base` (`q35-9b/01-trial-1`, `q35-4b-s23/00-trial-0`, `q35-08b/02-trial-2`).
-  Calibration is built into each checkpoint: `head.pt["temperature"]` (fitted by `scripts/calibrate_checkpoint.py` on the trial's development rows; 27B 1.38, 9B 2.30, 4B 2.41 (2.96 after the round-8 delta, 2.14 before it),
+  Qwen3 weights at tag `qwen3`), `jaredpalmer/kev-0.8b` (`r15-08b/00-trial-0` from the round-15 release: `night2-08b-du2/00-trial-0` + one epoch on `documents-v1` + `hard-v1` + `devtools-v1` train together, replay 6000; previous at tag `night2-du-release`), `jaredpalmer/kev-27b` (v2 since 2026-09-30: round 23's `27b-k-w85`, full bf16 weights `d27af6ab…` (0.85 round-22 full-weight SFT + 0.15 v1), staged at `/runs/release/kev-27b-r23/checkpoint`, T 1.32 from a held-out pool; v1, the LoRA `r6-27b-v2/01-trial-1` from "B1 v2" in `PLAN_27b.md` at tag `research-archive-2026-09-24`, at tag `v1-lora`; base `Qwen/Qwen3.8-27B` rev `1d4bf0f2`, post-trained, not `-Base`; bf16 only (51 GB of weights, ~66 GB resident when serving), so B200, H200 or H100 80 GB, no Mac path; the kev-deploy skill defaults it to B200, then H200, then H100; served fused with CUDA graphs like the others (v2: `runs/serving-27b-r23`; v1: `LoadOptions.fused` folds the adapter into the bf16 backbone, `runs/fused-27b-*`)). Pre-delta v7 checkpoints at tag `v7-base` (`q35-9b/01-trial-1`, `q35-4b-s23/00-trial-0`, `q35-08b/02-trial-2`).
+  Calibration is built into each checkpoint: `head.pt["temperature"]` (fitted by `scripts/calibrate_checkpoint.py` on the trial's development rows; 27B 1.32 (on a held-out pool, round 23; v1 1.38), 9B 2.30, 4B 2.41 (2.96 after the round-8 delta, 2.14 before it),
   0.8B 2.35 (2.41 before the round-15 delta)) is applied by `PointerHead` in eval mode; `KEV_TEMPERATURE=1.0` overrides to raw.
   Those were fitted in distribution; the script now refuses rows that share data with the checkpoint's training (its own suite,
   sources it trained on, a training corpus's calibration/development partition; `kev.rounds.pool_conflicts`, training from
@@ -273,8 +273,12 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   the laptop: `modal_app.py::release_copy --src /runs/.../checkpoint --dst /runs/release/<name>/checkpoint --expect <weights sha256>`
   (`scripts/release_checkpoint.py`: refuses an existing destination, checks the copy's weights hash), then the release temperature
   into the copy's head.pt (`scripts/calibrate_checkpoint.py`), then `modal_app.py::release_publish --run /runs/release/<name>/checkpoint
-  --repo <private repo> --card <card>` (kev.publish --private; shards linked, not copied). Kev-27B v2 (PLAN.md "Release candidate:
-  Kev-27B v2") is the worked example. Repos are named by
+  --repo <private repo> --card <card>` (kev.publish --private; shards linked, not copied). The approved public release: tag the
+  current main first (`kev-27b@v1-lora`), then `release_publish ... --public --confirm-public <repo> --replace` (`kev.publish --replace`
+  deletes every file the upload does not carry in the same commit; a full-weight upload into a repo still holding an adapter is refused
+  without it, since the loader rule would pick the adapter), then `modal_app.py::release_verify --jobs "<repo>@<suite>,..." --out runs/<name>`
+  (an H200 with no secret, no HF cache volume and no token) and `scripts/compare_release_rows.py` against the round's committed rows.
+  Kev-27B v2 (PLAN.md "Released: Kev-27B v2", record `runs/release/kev-27b-r23-published.json`) is the worked example. Repos are named by
   base model size (Kev-0.5B = Qwen2.5-0.5B); versions within a size are Hub tags (`hf repos tag create jaredpalmer/kev-0.5b vX.Y`).
   Collection: huggingface.co/collections/jaredpalmer/kev-6aad9d0ea49f2589665e07cd. `--run` in serve/benchmark accepts a Hub id.
 - HF Space (public demo, ZeroGPU): huggingface.co/spaces/jaredpalmer/kev. Source in `space/` (Gradio 6 `app.py`, `presets.py` mirrors the

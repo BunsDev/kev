@@ -512,3 +512,10 @@ runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/*
 !runs/release/kev-27b-r23.json
 !runs/release/kev-27b-r23-staging.json
 !runs/rel27-hub-semif/rows.json
+# released Kev-27B v2 (PLAN.md "Released: Kev-27B v2"): the public upload + anonymous verification record and the verification
+# reads of the public repository (runs/rel27-public: the resolutions in verify.json, each read's report + rows)
+!runs/release/kev-27b-r23-published.json
+!runs/rel27-public/verify.json
+!runs/rel27-public/*/
+!runs/rel27-public/*/report.json
+!runs/rel27-public/*/rows.json

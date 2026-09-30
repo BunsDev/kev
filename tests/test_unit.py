@@ -1773,14 +1773,17 @@ def test_a_complete_snapshot_is_never_deleted(tmp_path, capsys):
 
 class _FakeHub:
     """HfApi stand-in: repo visibility, create_repo, upload_folder (records the call, returns a commit), failures on demand."""
-    def __init__(self, private=True, exists=True, failures=0):
-        self.private, self.exists, self.failures, self.uploads, self.created = private, exists, failures, [], []
+    def __init__(self, private=True, exists=True, failures=0, files=()):
+        self.private, self.exists, self.failures, self.uploads, self.created, self.files = private, exists, failures, [], [], list(files)
 
     def create_repo(self, repo, repo_type=None, private=None, exist_ok=False):
         if not self.exists: self.exists, self.private = True, private; self.created.append((repo, private))
 
     def repo_info(self, repo, repo_type=None):
         return SimpleNamespace(private=self.private)
+
+    def list_repo_files(self, repo, repo_type=None, revision=None):
+        return list(self.files)
 
     def upload_folder(self, **kw):
         if self.failures: self.failures -= 1; raise ConnectionError("hub unavailable")
@@ -1875,6 +1878,28 @@ def test_publish_private_refuses_a_public_repo_and_links_shards(tmp_path, monkey
         assert hub.created == [("me/cand", True)]
     shards = {n for n in staged if n.startswith("model-")}
     assert len(shards) == 2 and all(staged[n] for n in shards) and not staged["head.pt"] and "interpolation.json" in staged and "README.md" in staged
+
+
+def test_publish_refuses_a_stale_layout_unless_replacing(tmp_path, monkeypatch):
+    """A full-weight upload into a repo that still holds an adapter is refused before anything is staged (the loader rule
+    would pick the adapter); with --replace it goes through as one commit that deletes every file it does not carry
+    (upload_folder's delete_patterns="*"). An adapter upload into a repo holding backbone shards is refused the same way."""
+    import sys
+    from kev import publish
+    run = _fake_full_checkpoint(tmp_path / "release/x/checkpoint")
+    card = tmp_path / "card.md"; card.write_text("---\nbase_model: x\nbase_model_relation: finetune\n---\nCard\n", encoding="utf-8")
+    hub = _FakeHub(private=False, files=[".gitattributes", "README.md", "adapter_config.json", "adapter_model.safetensors", "head.pt", "result.json"])
+    monkeypatch.setattr(publish, "HfApi", lambda: hub)
+    argv = ["kev.publish", "--run", str(run), "--repo", "me/kev-27b", "--card", str(card), "--message", "m"]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit, match="adapter_config.json"): publish.main()
+    assert hub.uploads == []
+    monkeypatch.setattr(sys, "argv", argv + ["--replace"])
+    publish.main()
+    assert len(hub.uploads) == 1 and hub.uploads[0]["delete_patterns"] == "*"
+    assert publish.stale_layout(_FakeHub(files=["model-00001-of-00002.safetensors", "model.safetensors.index.json", "head.pt"]), "r", None, full=False) == \
+        ["model-00001-of-00002.safetensors", "model.safetensors.index.json"]
+    assert publish.stale_layout(_FakeHub(files=["config.json", "model.safetensors", "head.pt"]), "r", None, full=True) == []
 
 
 def test_committed_snapshots_and_the_final_checkpoint_are_mirrored(tmp_path, monkeypatch, capsys):
