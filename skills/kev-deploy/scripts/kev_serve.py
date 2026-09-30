@@ -16,10 +16,11 @@ KEV_MIN_CONTAINERS (1 keeps one container warm; default 0 scales to zero after 5
 KEV_FLASH=1 (Modal's experimental direct HTTP server in KEV_REGION: about twice the requests per container and half the
 round trip; keeps one container up, since it cannot wake from zero quickly; the URL is
 https://<workspace>--<app>-kev.<region>.modal.direct), KEV_APP_NAME (default "kev"; one app per
-endpoint). The image installs the kev package at KEV_REF; weights, compiled kernels and their autotuning
-results are cached on the `kev-hf-cache` volume, so only the first cold start downloads and compiles them. A request that
-waits longer than 150 s for a cold start gets an HTTP 303 to a result URL (Modal's web limit): follow redirects
-(`curl -L`) or warm the endpoint first.
+endpoint), KEV_TRUNCATE_STATES=1 (read the first 65,536 tokens of a longer state, and say so on every response, instead
+of refusing it with a 422; kev from #193 on, not yet at the KEV_REF below). The image installs the kev package at
+KEV_REF; weights, compiled kernels and their autotuning results are cached on the `kev-hf-cache` volume, so only the first
+cold start downloads and compiles them. A request that waits longer than 150 s for a cold start gets an HTTP 303 to a
+result URL (Modal's web limit): follow redirects (`curl -L`) or warm the endpoint first.
 """
 import os
 import time
@@ -37,7 +38,8 @@ GPU_FOR = {"jaredpalmer/kev-0.8b": ["L4", "L40S"], "jaredpalmer/kev-4b": ["L40S"
            "jaredpalmer/kev-27b": ["B200", "H200", "H100"]}
 
 # Deploy-time settings travel in the image env, so the container evaluates this file with the same values.
-SETTINGS = {"KEV_MODEL": "jaredpalmer/kev-4b", "KEV_APP_NAME": "kev", "KEV_MIN_CONTAINERS": "0", "KEV_GPU": "", "KEV_REGION": "", "KEV_FLASH": "0"}
+SETTINGS = {"KEV_MODEL": "jaredpalmer/kev-4b", "KEV_APP_NAME": "kev", "KEV_MIN_CONTAINERS": "0", "KEV_GPU": "", "KEV_REGION": "", "KEV_FLASH": "0",
+            "KEV_TRUNCATE_STATES": "0"}   # read by kev.serve in the container (kev.serve.Server.truncate_states)
 SETTINGS = {k: os.environ.get(k, v) for k, v in SETTINGS.items()}
 MODEL = SETTINGS["KEV_MODEL"]
 GPU = SETTINGS["KEV_GPU"].split(",") if SETTINGS["KEV_GPU"] else GPU_FOR.get(MODEL.split("@")[0])

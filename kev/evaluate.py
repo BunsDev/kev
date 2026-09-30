@@ -126,7 +126,7 @@ def test_isolation(tok, model, rng, n=20):
 def test_packed_vs_separate(tok, model, reqs, rng, n=30):
     diffs, t_pack, t_sep, nq = [], 0.0, 0.0, 0
     for r in [x for x in reqs if len(x["questions"]) >= 2][:n]:
-        enc = model.encode(tok, materialize(r))
+        enc = model.encode(tok, materialize(r))   # legacy prototype eval (not used for releases): truncates at the default training context by design
         sync(model.device); t = time.time(); pp = model.probs(enc); sync(model.device); t_pack += time.time() - t
         for qi, qid in enumerate(r["questions"]):
             e1 = model.encode(tok, materialize(_one(r, qid)))
@@ -165,7 +165,7 @@ def test_temperature(tok, model, reqs, rng):
     """Fit one global temperature on even-indexed records (by NLL), report NLL/ECE on odd-indexed ones before and after."""
     fit, held = [], []
     with torch.no_grad():
-        for i, r in enumerate(reqs):
+        for i, r in enumerate(reqs):   # legacy prototype eval (not used for releases): encode truncates at the default training context by design
             try: rec = materialize(augment(r, rng, p_none=0, p_none_distract=0, p_distract=0)); zs = model(model.encode(tok, rec))
             except ValueError as exc: raise ValueError("Evaluation rejected an example; refusing partial metrics") from exc
             for z, q in zip(zs, rec["questions"]):

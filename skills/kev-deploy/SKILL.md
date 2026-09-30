@@ -65,7 +65,8 @@ Settings are read at deploy time; redeploying with other values replaces the mod
 `KEV_GPU=H100` overrides the GPU list (comma-separated). `KEV_REGION=us` (or `us-east`, `eu`, ...) pins where the container
 runs: without it Modal takes the first region with a free GPU, which can be another continent (an unpinned Kev-4B landed in
 Frankfurt and added ~150 ms to every round trip from the US). A pinned region costs 1.15-1.75x on Modal; pin it near the
-callers for latency-sensitive use.
+callers for latency-sensitive use. `KEV_TRUNCATE_STATES=1` reads the first 65,536 tokens of a longer document instead
+of refusing it (see Long documents under Troubleshooting).
 
 ### Throughput
 
@@ -143,10 +144,14 @@ modal volume delete kev-hf-cache   # optional: the cached weights (shared with k
 - **Slow round trips with fast `latency_ms`**: the container is far from the caller or every request opens a new
   connection; set `KEV_REGION` and reuse the HTTP client.
 - **401 with the right key**: the key is fixed at deploy time; redeploy with the same `KEV_API_KEY` exported.
-- **Long documents**: the server reads the first 65,536 tokens of a state and drops the rest without an error; a
-  question with its options may take 8,192 tokens more (more when the state is shorter), and a longer one gets a 422.
-  `usage.input_tokens` in the response counts the tokens read (state plus questions). Kev-27B trained on states of up
-  to 32,768 tokens and the smaller models on 384, so all four accept long documents but Kev-27B answers them best. The
-  first long request after a start is slow: Kev-27B on an H200 took 15 s for a 15.8k-token state, and 0.36 s for the
-  same request again (state cached).
+- **Long documents**: a state may have up to 65,536 tokens and a question with its options 8,192 more (more when the
+  state is shorter). kev from #193 on refuses a longer state with a 422 that gives its token count and the limit (the
+  TypeSafe SDK raises `TypeSafeUnprocessableEntityError` with that message), as it always did a longer question: shorten
+  or split the document. Deploying with `KEV_TRUNCATE_STATES=1` reads only the first 65,536 tokens instead, and then
+  every response carries `truncated` and `usage.state_tokens` / `state_tokens_used`. The kev commit this endpoint
+  pins (`KEV_REF`, 0a58b69) predates that: it drops the rest of a longer state without an error, and only
+  `usage.input_tokens` (the tokens read, state plus questions) shows it, so check it until the pin moves. Kev-27B
+  trained on states of up to 32,768 tokens and the smaller models on 384, so all four accept long documents but Kev-27B
+  answers them best. The first long request after a start is slow: Kev-27B on an H200 took 15 s for a 15.8k-token
+  state, and 0.36 s for the same request again (state cached).
 - **Logs**: `modal app logs kev` shows the load line (`serving <model> on <GPU> ... ready in Ns`) and every request.

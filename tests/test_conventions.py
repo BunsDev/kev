@@ -28,6 +28,9 @@ RULES = [
     ("the serving / long-state limits (SERVE_MAX_*, ROW_PASS_TOKENS, MAX_TRAIN_STATE) and the pre-64k aliases the frozen suites' builders "
      "rebuild byte for byte with (SERVE_MAX_*_8K, MAX_TRAIN_STATE_8K) are defined only in kev.model",
      r"^\s*(SERVE_MAX_(STATE|BRANCH|PACKED)|ROW_PASS_TOKENS|MAX_TRAIN_STATE)(_8K)?\s*(=|,[^\n=]*=)|(?<![\w.])7552\b", {"kev/model.py"}),
+    ("a request is admitted to the serving context (state refused over SERVE_MAX_STATE unless truncation is opted into, "
+     "question rows over SERVE_MAX_BRANCH refused) only by kev.model.admit, which kev.serve and the Space call",
+     r"max_state=SERVE_MAX_STATE|max_branch=SERVE_MAX_BRANCH", {"kev/model.py"}),
     ("the serving contexts manifests record (SERVING_CONTEXT, and SERVING_CONTEXT_8K for the suites frozen before 64k states) are defined only in kev.suite",
      r"^\s*SERVING_CONTEXT(_8K)?\s*=", {"kev/suite.py"}),
     ("text files are read and written as UTF-8 (kev.suite.read_json/read_jsonl/write_json/write_jsonl, or an explicit encoding=); "

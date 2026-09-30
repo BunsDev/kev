@@ -136,3 +136,32 @@ def test_prefix_reuse_and_question_isolation(models):
     assert same(chunked, alone)   # one branch row on the cached prefix, whether asked alone or split out of a batch
     with pytest.raises(ValueError, match="prefix"):
         m.probs_with_prefix(m.encode(tok, {**rec, "state": rec["state"] + " extra words here"}), prefix)
+
+
+def test_server_refuses_or_marks_over_length_states_on_mlx(models, monkeypatch):
+    """kev.serve on the MLX backend admits like the torch one (kev.model.admit): with the state limit set just under a
+    real record's state, the default server answers 422 before the model runs, and a truncating server reads exactly the
+    first `limit` tokens (the answers of that cut encoding) and says so."""
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    import kev.model as M
+    from kev import serve
+    tok, m, _, recs = models
+    rec = recs[0]
+    n = m.encode(tok, rec, max_state=10 ** 6, max_branch=10 ** 6)["state_tokens"]
+    monkeypatch.setattr(M, "SERVE_MAX_STATE", n - 1)
+    card = SimpleNamespace(release_date=lambda: "2026-01-01")
+    refuse, truncate = serve.Server(card, tok, m, "mps"), serve.Server(card, tok, m, "mps", truncate_states=True)
+    try:
+        with pytest.raises(HTTPException) as refused:
+            refuse.probs(rec)
+        assert refused.value.status_code == 422 and refused.value.detail.startswith(f"state is {n:,} tokens, over the {n - 1:,}-token limit")
+        assert refuse.batches == 0
+        ps, stats = truncate.probs(rec)
+        assert (stats["state_tokens"], stats["state_tokens_used"]) == (n, n - 1)
+        cut = m.probs(m.encode(tok, rec, max_state=n - 1, max_branch=M.SERVE_MAX_BRANCH))
+        assert all(np.allclose(p, c.tolist(), atol=1e-6) for p, c in zip(ps, cut))
+        monkeypatch.setattr(M, "SERVE_MAX_STATE", n)
+        assert refuse.probs(rec)[1]["state_tokens_used"] == n   # exactly at the limit: admitted whole
+    finally:
+        refuse.close(); truncate.close()

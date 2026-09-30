@@ -637,7 +637,7 @@ class FakeServed:
     def __init__(self, leak=lambda others: 0.0):
         self.leak = leak
 
-    def encode(self, tok, rec):
+    def encode(self, tok, rec, **limits):   # the serving limits kev.model.admit passes
         return rec
 
     def probs_batch(self, recs, prefixes, keep):

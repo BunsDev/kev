@@ -297,6 +297,13 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   the playground proxies :8009)
   - TypeSafe-compatible: `POST /v1/systemone`, `GET /v1/models` (model cards for `kev-latest` and `jev-latest`, plus device, dtype, temperature and prefix-cache stats), an `x-typesafe-request-id` header on every response, and bearer auth when `KEV_API_KEY` is set (unset = open server).
   - SDK: `TypeSafeClient(api_key="local", base_url="http://127.0.0.1:8009", model="kev-latest")`
+  - Admission (`kev.model.admit`, the one check kev.serve and the Space call, the same on torch and MLX): a state over `SERVE_MAX_STATE` tokens (65,536, `<state>` included) gets a 422
+    naming its count, the limit and the fixes (the TypeSafe SDK raises `TypeSafeUnprocessableEntityError` with it, not retried), like a question row over `SERVE_MAX_BRANCH`;
+    until this was fixed the server cut the state silently (only `usage.input_tokens` showed it; every Kev-27B deployment at kev-deploy's f2bb629 pin read 8,192 tokens).
+    `KEV_TRUNCATE_STATES=1` (`Server.truncate_states`) reads the first 65,536 tokens instead, and every response of such a server carries `truncated` plus
+    `usage.state_tokens` / `state_tokens_used` (the SDK ignores the extra fields); a default server's body is unchanged. `/v1/models` reports `max_state_tokens` and
+    `truncate_states`. No per-request switch: TypeSafe's own endpoint would ignore it. Benchmarks never truncate (`LocalPredictor` encodes strictly within the suite's context);
+    `--remote` turns an endpoint's 400/413/422 into `ContextOverflow` at once (rejected under `skip_overlong`, else a clean stop), retries only 408/429/5xx and connection errors.
   - CUDA: bf16, fused kernels and CUDA graphs by default (`LoadOptions.fused` / `LoadOptions.cuda_graphs`, `KEV_FUSED=0` / `KEV_CUDA_GRAPHS=0` to decline; fused only when fla 0.5.2 is installed, `checkpoint.fused_available`, not in the serve extra). A server pass was
     kernel-launch bound (~60 ms on an H100 at any length). `kev/fused_qwen35.py` rewrites the merged Qwen3.5 layers with fla Triton kernels
     (it needs fla 0.5.2 exactly, pinned in the images, and refuses others: it patches fla's NB-keyed kernel launches; a pass continuing a

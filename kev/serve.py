@@ -6,8 +6,10 @@ TypeSafe-compatible: POST /v1/systemone, GET /v1/models, the `x-typesafe-request
 when KEV_API_KEY is set (unset = open server, the local default). Demo extras: POST /v1/systemone/permute (one Choice
 under several option orders) and POST /v1/systemone/separate (each question in its own pass, for the packed-vs-separate
 comparison). KEV_PREFIX_CACHE / KEV_PREFIX_MIN_TOKENS / KEV_PREFIX_MAX_TOKENS size the state-prefix cache; KEV_DATE_FACTS=1 opts into the
-date preprocessing (api.with_date_facts). Backend and precision follow LoadOptions (KEV_BACKEND, KEV_DTYPE, ...): on Apple
-Silicon the hybrid Qwen3.5 checkpoints run on MLX by default, elsewhere on torch in bf16.
+date preprocessing (api.with_date_facts). A state over kev.model.SERVE_MAX_STATE tokens is refused with a 422 (kev.model.admit);
+KEV_TRUNCATE_STATES=1 reads its first SERVE_MAX_STATE tokens instead, and then every response says whether it did. Backend
+and precision follow LoadOptions (KEV_BACKEND, KEV_DTYPE, ...): on Apple Silicon the hybrid Qwen3.5 checkpoints run on MLX
+by default, elsewhere on torch in bf16.
 """
 import argparse, asyncio, atexit, hmac, os, queue, random, sys, threading, time, traceback, uuid
 from concurrent.futures import Future
@@ -20,13 +22,14 @@ from pydantic import BaseModel, Field
 from .api import SystemOneRequest, to_record, to_answers, output_tokens, with_date_facts
 from .checkpoint import Checkpoint, LoadOptions, fused_available, is_hub_id
 from .device import default_device, empty_cache, out_of_memory, sync
-from .model import SERVE_MAX_BRANCH, SERVE_MAX_STATE
+from .model import SERVE_MAX_STATE, ContextOverflow, admit
 
 PREFIX_CACHE_SIZE = int(os.environ.get("KEV_PREFIX_CACHE", "4"))          # states kept (KV + DeltaNet states; attention-only backbones also the state's hidden states); 0 disables
 PREFIX_MIN_TOKENS = os.environ.get("KEV_PREFIX_MIN_TOKENS")               # states shorter than this are not cached; default = the model's prefix_min_tokens (0 for hybrid backbones and MLX, 384 for attention-only torch models)
 PREFIX_MAX_TOKENS = int(os.environ.get("KEV_PREFIX_MAX_TOKENS", "65536"))  # state tokens the cache holds in all (least recently used evicted first); a longer state is not cached.
                                                                          # One 64k state (Kev-27B: ~1.3 GB of keys, values and DeltaNet states), or four 16k ones, not four 64k ones
 DATE_FACTS = os.environ.get("KEV_DATE_FACTS", "0") == "1"
+TRUNCATE_STATES = os.environ.get("KEV_TRUNCATE_STATES", "0") == "1"    # unset = a state over SERVE_MAX_STATE tokens gets a 422; 1 = read its first SERVE_MAX_STATE tokens, and every response says whether it did (truncated, usage.state_tokens / state_tokens_used)
 API_KEY = os.environ.get("KEV_API_KEY")                                  # unset = open server; set = require Authorization: Bearer <key>, as the TypeSafe clients always send
 MAX_BATCH = 64                                                           # requests the model thread takes at once (kev.cuda_graphs splits them to fit its buffers)
 MODEL_NAMES = ("kev-latest", "jev-latest")                               # both names serve this checkpoint; jev-latest is the TypeSafe SDK default model, so an unconfigured client works
@@ -86,6 +89,7 @@ class Server:
     batches: int = 0
     batched_requests: int = 0
     release_date: str = field(default="")   # for the TypeSafe model card; resolved once (may ask the Hub)
+    truncate_states: bool = field(default_factory=lambda: TRUNCATE_STATES)   # KEV_TRUNCATE_STATES; off: an over-length state is refused (kev.model.admit)
 
     def __post_init__(self):
         self.release_date = self.release_date or self.checkpoint.release_date()
@@ -111,10 +115,14 @@ class Server:
     def submit(self, rec):
         """Queue one record for the model thread. -> a Future of (probabilities, stats). The state prefix (tokens up to the
         first question) is cached across requests, so a repeated state only pays for its question rows. latency_ms is the
-        model time of the batch the request ran in (not its wait in the queue)."""
+        model time of the batch the request ran in (not its wait in the queue). A record kev.model.admit refuses (a state
+        over SERVE_MAX_STATE tokens unless truncate_states, a question row over SERVE_MAX_BRANCH) is a 422 here, before
+        it reaches the model."""
         if self.stopping.is_set(): raise HTTPException(503, "the server is stopping")
-        try: enc = self.model.encode(self.tok, rec, max_state=SERVE_MAX_STATE, max_branch=SERVE_MAX_BRANCH)
-        except ValueError as e: raise HTTPException(422, str(e))
+        try: enc = admit(self.model, self.tok, rec, truncate=self.truncate_states)
+        except ValueError as e:   # ContextOverflow, or a record the encoder cannot take
+            state = isinstance(e, ContextOverflow) and e.max_state is not None
+            raise HTTPException(422, str(e) + (f"; or start the server with KEV_TRUNCATE_STATES=1 to read only its first {e.max_state:,} tokens (responses then say truncated: true)" if state else ""))
         done = Future()
         self.queue.put((enc, done))
         return done
@@ -159,7 +167,8 @@ class Server:
         sync(self.device); dt = round((time.time() - t) * 1000, 1)
         self.prefix_cache.store(keys, cached, prefixes)
         self.batches += 1; self.batched_requests += len(encs)
-        return [([q.tolist() for q in p], {"tokens": len(enc["ids"]), "state_tokens": enc["seg"].count(0), "latency_ms": dt, "prefix_cache_hit": c is not None})
+        return [([q.tolist() for q in p], {"tokens": len(enc["ids"]), "state_tokens": enc["state_tokens"], "state_tokens_used": enc["seg"].count(0),
+                                           "latency_ms": dt, "prefix_cache_hit": c is not None})   # state_tokens: the request's state; _used: what the model read (less only when truncated)
                 for enc, p, c in zip(encs, ps, cached)]
 
     def wait_idle(self):
@@ -181,8 +190,15 @@ class Server:
         return self._body(req, meta, *await asyncio.wrap_future(self.submit(rec)))
 
     def _body(self, req, meta, ps, m):
+        """The TypeSafe body. A server that may truncate (truncate_states) also says, on every response, whether it did:
+        `truncated`, and usage.state_tokens (the request's state) / state_tokens_used (what the model read), both counting
+        the <state> token. The TypeSafe SDKs ignore fields they do not model, so clients keep parsing."""
         answers = to_answers(ps, meta)
-        return {"model": req.model, "answers": answers, "usage": {"input_tokens": m["tokens"], "output_tokens": output_tokens(self.tok, answers)}, "latency_ms": m["latency_ms"]}
+        body = {"model": req.model, "answers": answers, "usage": {"input_tokens": m["tokens"], "output_tokens": output_tokens(self.tok, answers)}, "latency_ms": m["latency_ms"]}
+        if self.truncate_states:
+            body["usage"].update(state_tokens=m["state_tokens"], state_tokens_used=m["state_tokens_used"])
+            body["truncated"] = m["state_tokens"] > m["state_tokens_used"]
+        return body
 
 
 def prepare(req):
@@ -237,7 +253,7 @@ def systemone_permute(r: PermuteSystemOne):
         resp = server().answer(one); a = resp["answers"][r.question]
         runs.append({"order": order, "probabilities": a["probabilities"], "choice": a["choice"], "latency_ms": resp["latency_ms"]})
     spread = {k: max(x["probabilities"][k] for x in runs) - min(x["probabilities"][k] for x in runs) for k in keys}
-    return {"runs": runs, "argmax_stable": len({x["choice"] for x in runs}) == 1, "spread": spread}
+    return truncation_marks({"runs": runs, "argmax_stable": len({x["choice"] for x in runs}) == 1, "spread": spread}, resp)
 
 
 @app.post("/v1/systemone/separate")
@@ -245,9 +261,19 @@ def systemone_separate(req: SystemOneRequest):
     """Answer each question in its own request against the same state (N passes). For packed-vs-separate comparison."""
     parts = [server().answer(req.model_copy(update={"questions": {qid: q}})) for qid, q in req.questions.items()]
     answers = {qid: a for p in parts for qid, a in p["answers"].items()}
-    return {"model": req.model, "answers": answers,
+    body = {"model": req.model, "answers": answers,
             "usage": {"input_tokens": sum(p["usage"]["input_tokens"] for p in parts), "output_tokens": output_tokens(server().tok, answers)},
             "latency_ms": round(sum(p["latency_ms"] for p in parts), 1)}
+    return truncation_marks(body, parts[0])
+
+
+def truncation_marks(body, part):
+    """A demo endpoint built from several /v1/systemone answers on one state carries a truncating server's marks
+    (Server._body: `truncated`, usage.state_tokens / state_tokens_used) from any one of them: each read the same tokens."""
+    if "truncated" in part:
+        body["truncated"] = part["truncated"]
+        body.setdefault("usage", {}).update({k: part["usage"][k] for k in ("state_tokens", "state_tokens_used")})
+    return body
 
 
 @app.get("/v1/models")
@@ -259,7 +285,7 @@ def models():
     card = {"description": f"Kev pointer head on {meta.base}, serving {ck.requested} at temperature {s.model.head.temperature:.2f}",
             "release_date": s.release_date,
             "run": ck.requested, "base": meta.base, "lora": meta.lora, "device": s.device, "backend": s.model.backend, "dtype": s.model.dtype,
-            "temperature": s.model.head.temperature,
+            "temperature": s.model.head.temperature, "max_state_tokens": SERVE_MAX_STATE, "truncate_states": s.truncate_states,
             "cuda_graphs": graphs.stats() if (graphs := getattr(s.model, "graphs", None)) else None,
             "prefix_cache": {"size": s.prefix_cache.size, "min_state_tokens": s.prefix_cache.min_tokens, "max_tokens": s.prefix_cache.max_tokens, "hits": s.prefix_cache.hits,
                              "misses": s.prefix_cache.misses, "cached_states": len(s.prefix_cache.entries), "oom_retries": s.prefix_cache.oom_retries},
@@ -288,7 +314,8 @@ def main():
     tok, model = ck.load(dev, opts)
     if fused_default and not opts.fused and model.hybrid: print("fused Qwen3.5 kernels off: install the flash-linear-attention version kev/fused_qwen35.py pins (FLA_VERSION) to turn them on")
     app.state.server = Server(ck, tok, model, dev)
-    print(f"serving {ck.requested} ({ck.path}) on {dev} via {model.backend} ({model.dtype}) {a.host}:{a.port}")   # /v1/models reports the run as given, not the resolved cache path
+    print(f"serving {ck.requested} ({ck.path}) on {dev} via {model.backend} ({model.dtype}) {a.host}:{a.port}; states over {SERVE_MAX_STATE:,} tokens "
+          f"{'truncated (KEV_TRUNCATE_STATES=1)' if app.state.server.truncate_states else 'refused (422)'}")   # /v1/models reports the run as given, not the resolved cache path
     import uvicorn
     uvicorn.run(app, host=a.host, port=a.port)
 

@@ -328,7 +328,7 @@ def test_cuda_graphs_match_eager():
     if not torch.cuda.is_available(): pytest.skip("needs CUDA")
     from kev.checkpoint import Checkpoint, LoadOptions
     from kev import cuda_graphs
-    from kev.model import SERVE_MAX_BRANCH, SERVE_MAX_STATE
+    from kev.model import admit
     tok, m = Checkpoint(KEV_08B).load("cuda", LoadOptions(dtype=torch.bfloat16, cuda_graphs=True, fused=True))
     q = {"instr": "Which team should handle this?", "options": ["returns", "shipping", "billing", "other"], "label": 0}
     recs = [{"state": "Order 4411 arrived late and the box was crushed. Two charges appear on the card." * k, "questions": [q] * n}
@@ -336,7 +336,7 @@ def test_cuda_graphs_match_eager():
     recs.append({"state": "short", "questions": [{**q, "instr": "word " * (cuda_graphs.GRAPH_ROW + 10)}]})
     graphs = m.graphs
     with torch.no_grad():
-        encs = [m.encode(tok, rec, max_state=SERVE_MAX_STATE, max_branch=SERVE_MAX_BRANCH) for rec in recs + recs[:2]]
+        encs = [admit(m, tok, rec) for rec in recs + recs[:2]]
         m.graphs = None; refs = [m.probs(e) for e in encs]; eager_prefix = m.prefix(encs[2])
         m.graphs = graphs
         new_prefixes = None
@@ -365,7 +365,7 @@ def test_server_recovers_when_a_pass_runs_out_of_memory():
     from kev.checkpoint import Checkpoint, LoadOptions
     from kev import cuda_graphs
     from kev.device import empty_cache, sync
-    from kev.model import SERVE_MAX_BRANCH, SERVE_MAX_STATE
+    from kev.model import admit
     from kev.serve import Server
     ck = Checkpoint(KEV_08B)
     tok, m = ck.load("cuda", LoadOptions(dtype=torch.bfloat16, cuda_graphs=True, fused=True))
@@ -375,7 +375,7 @@ def test_server_recovers_when_a_pass_runs_out_of_memory():
     # entry (graphed question rows); ~46 MiB of prefix each on Kev-0.8B
     rec = lambda i: {"state": f"Ticket {i}. " + f"Order {4400 + i} arrived late and the box was crushed. Two charges appear on the card. " * 170, "questions": qs}
     fills, target, after = [rec(i) for i in range(16)], rec(100), rec(101)
-    enc = lambda r: m.encode(tok, r, max_state=SERVE_MAX_STATE, max_branch=SERVE_MAX_BRANCH)
+    enc = lambda r: admit(m, tok, r)
     n = enc(target)["seg"].count(0)
     assert cuda_graphs.GRAPH_STATE < n <= cuda_graphs.BANK_WIDTH, n
     total = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory

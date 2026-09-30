@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
@@ -122,11 +123,26 @@ class LocalPredictor:
                 "latency_ms": 1000 * (time.perf_counter() - start), "input_tokens": len(enc["ids"]), **({"kernels": LONG_ROW_KERNELS} if efficient else {})}
 
 
+REFUSAL_STATUSES = (400, 413, 422)   # an endpoint declining the request itself (kev.serve: 422 past its context; Jev: 400 / 413 / 422)
+
+
+def http_detail(error):
+    """The message of an HTTP error body: FastAPI's / TypeSafe's `detail` (or `error`) when it is JSON, else its text."""
+    try: text = error.read().decode("utf-8", "replace")
+    except Exception: return str(error.reason)
+    try: body = json.loads(text)
+    except ValueError: return text[:500] or str(error.reason)
+    return str(body.get("detail") or body.get("error") or body) if isinstance(body, dict) else str(body)
+
+
 class RemotePredictor:
     """Score any TypeSafe System One-compatible endpoint (POST <base_url>/v1/systemone) on frozen records. Probabilities are
     taken from the response as returned (renormalised by validate_distribution like every other predictor). Records the
     server-reported model id so the manifest can pin what was scored. `concurrency` is how many requests kev.benchmark may
-    keep in flight at once (each call is independent: one request, its own retries); 1 scores sequentially."""
+    keep in flight at once (each call is independent: one request, its own retries); 1 scores sequentially. An endpoint
+    that declines the request itself (REFUSAL_STATUSES: kev.serve's 422 for a state past its context) raises
+    ContextOverflow at once, so kev.benchmark counts the record rejected under skip_overlong and stops otherwise; another
+    client error stops at once too; 408, 429, 5xx, connection errors and timeouts are tried `retries` times in all."""
 
     def __init__(self, base_url, model="kev-latest", api_key="local", timeout=120, retries=3, concurrency=1):
         if concurrency < 1:
@@ -147,8 +163,15 @@ class RemotePredictor:
                     body = json.loads(resp.read())
                 latency = 1000 * (time.perf_counter() - start)
                 break
-            except Exception as error:   # 5xx / timeouts: retry with backoff; anything persistent surfaces as a rejected record
-                last = error; time.sleep(2 ** attempt)
+            except urllib.error.HTTPError as error:
+                if error.code in REFUSAL_STATUSES:   # the request itself (kev.serve: a state or question over the serving context): a rejected record, not retried
+                    raise ContextOverflow(f"remote endpoint refused the request (HTTP {error.code}): {http_detail(error)}") from None
+                if error.code not in (408, 429) and error.code < 500:   # 401, 403, 404, ...: the same answer every time; 408, 429 and 5xx are retried
+                    raise RuntimeError(f"remote endpoint answered HTTP {error.code}: {http_detail(error)}") from None
+                last = error
+            except Exception as error:   # connection errors and timeouts: retried
+                last = error
+            if attempt + 1 < self.retries: time.sleep(2 ** attempt)
         else:
             raise RuntimeError(f"remote endpoint failed after {self.retries} attempts: {last}")
         self.served_model = body.get("model", self.served_model)
@@ -209,7 +232,6 @@ class JevRefused(ContextOverflow):
     see JevPredictor). With count_refusals, kev.benchmark counts such a record as rejected (rejected.json) instead of stopping."""
 
 
-REFUSAL_STATUSES = (400, 413, 422)
 # Jev's context in tokens (documented ~32k). Past it the AI Gateway answers with HTTP 400 *or* a 503 GatewayInternalServerError
 # (evals/longdoc-v1: 212 x 400 and 28 x 503 on the 240 requests of ~57k-61k tokens; every request of <= ~31k tokens answered),
 # so a hosted-side error on a request estimated past OVERSIZE x JEV_CONTEXT_TOKENS is the size, not an outage. The estimate is
