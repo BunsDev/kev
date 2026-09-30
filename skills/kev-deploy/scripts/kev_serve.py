@@ -17,7 +17,7 @@ KEV_FLASH=1 (Modal's experimental direct HTTP server in KEV_REGION: about twice 
 round trip; keeps one container up, since it cannot wake from zero quickly; the URL is
 https://<workspace>--<app>-kev.<region>.modal.direct), KEV_APP_NAME (default "kev"; one app per
 endpoint), KEV_TRUNCATE_STATES=1 (read the first 65,536 tokens of a longer state, and say so on every response, instead
-of refusing it with a 422; kev from #193 on, not yet at the KEV_REF below). The image installs the kev package at
+of refusing it with a 422). The image installs the kev package at
 KEV_REF; weights, compiled kernels and their autotuning results are cached on the `kev-hf-cache` volume, so only the first
 cold start downloads and compiles them. A request that waits longer than 150 s for a cold start gets an HTTP 303 to a
 result URL (Modal's web limit): follow redirects (`curl -L`) or warm the endpoint first.
@@ -28,7 +28,7 @@ import time
 import modal
 import modal.experimental
 
-KEV_REF = "0a58b699e458a195c32a73f4cd7cdf4435fcaab3"   # github.com/jaredpalmer/kev commit whose kev package this endpoint runs
+KEV_REF = "2ea566009d95763bbcea7cc03468140cc559cbfd"   # github.com/jaredpalmer/kev commit whose kev package this endpoint runs
 # GPU preference lists (Modal takes the first with capacity), from runs/serve-*/, runs/fused-27b-*/ and runs/serving-*/report.json in the repo.
 # An L4 is enough for the 0.8B but runs out of compute on the 4B; the L40S is the cheapest GPU that answers the 4B in tens
 # of milliseconds, the H100 the fastest for the 4B and 9B. The A100 is slower than the L40S here and costs more. Kev-27B

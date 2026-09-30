@@ -145,13 +145,12 @@ modal volume delete kev-hf-cache   # optional: the cached weights (shared with k
   connection; set `KEV_REGION` and reuse the HTTP client.
 - **401 with the right key**: the key is fixed at deploy time; redeploy with the same `KEV_API_KEY` exported.
 - **Long documents**: a state may have up to 65,536 tokens and a question with its options 8,192 more (more when the
-  state is shorter). kev from #193 on refuses a longer state with a 422 that gives its token count and the limit (the
-  TypeSafe SDK raises `TypeSafeUnprocessableEntityError` with that message), as it always did a longer question: shorten
-  or split the document. Deploying with `KEV_TRUNCATE_STATES=1` reads only the first 65,536 tokens instead, and then
-  every response carries `truncated` and `usage.state_tokens` / `state_tokens_used`. The kev commit this endpoint
-  pins (`KEV_REF`, 0a58b69) predates that: it drops the rest of a longer state without an error, and only
-  `usage.input_tokens` (the tokens read, state plus questions) shows it, so check it until the pin moves. Kev-27B
+  state is shorter). A longer state gets a 422 that gives its token count and the limit (the TypeSafe SDK raises
+  `TypeSafeUnprocessableEntityError` with that message), as a longer question does: shorten or split the document.
+  Deploying with `KEV_TRUNCATE_STATES=1` reads only the first 65,536 tokens instead, and then every response carries
+  `truncated` and `usage.state_tokens` / `state_tokens_used`. Kev-27B
   trained on states of up to 32,768 tokens and the smaller models on 384, so all four accept long documents but Kev-27B
   answers them best. The first long request after a start is slow: Kev-27B on an H200 took 15 s for a 15.8k-token
-  state, and 0.36 s for the same request again (state cached).
+  state, and 0.36 s for the same request again (state cached); a 70k-token state read to 65,536 tokens with
+  `KEV_TRUNCATE_STATES=1` took 12 s, then 0.29 s (`runs/kev-deploy-2ea5660` in the repo).
 - **Logs**: `modal app logs kev` shows the load line (`serving <model> on <GPU> ... ready in Ns`) and every request.
