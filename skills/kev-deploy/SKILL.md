@@ -143,4 +143,10 @@ modal volume delete kev-hf-cache   # optional: the cached weights (shared with k
 - **Slow round trips with fast `latency_ms`**: the container is far from the caller or every request opens a new
   connection; set `KEV_REGION` and reuse the HTTP client.
 - **401 with the right key**: the key is fixed at deploy time; redeploy with the same `KEV_API_KEY` exported.
+- **Long documents**: the server reads the first 65,536 tokens of a state and drops the rest without an error; a
+  question with its options may take 8,192 tokens more (more when the state is shorter), and a longer one gets a 422.
+  `usage.input_tokens` in the response counts the tokens read (state plus questions). Kev-27B trained on states of up
+  to 32,768 tokens and the smaller models on 384, so all four accept long documents but Kev-27B answers them best. The
+  first long request after a start is slow: Kev-27B on an H200 took 15 s for a 15.8k-token state, and 0.36 s for the
+  same request again (state cached).
 - **Logs**: `modal app logs kev` shows the load line (`serving <model> on <GPU> ... ready in Ns`) and every request.

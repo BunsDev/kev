@@ -519,3 +519,8 @@ runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/*
 !runs/rel27-public/*/
 !runs/rel27-public/*/report.json
 !runs/rel27-public/*/rows.json
+# kev-deploy at KEV_REF 0a58b69 against Kev-27B v2: the check (a ~16k-token state, admitted and answered) and the served
+# semif-v1 development read it compares with runs/rel27-public (the long request itself is rebuilt by make_long_state.py)
+!runs/kev-deploy-27b-v2/deploy_check.json
+!runs/kev-deploy-27b-v2/make_long_state.py
+!runs/kev-deploy-27b-v2/semif-v1/rows.json
