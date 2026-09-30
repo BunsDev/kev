@@ -330,6 +330,10 @@ def score_trial(run, suite, output, expected_sources, device, provenance, transf
                                           "head_sha256": digest(Path(predictor.run) / "head.pt"),
                                           "weights_sha256": predictor.checkpoint.weights_sha256(),
                                           "inference_temperature": predictor.temperature}
+    # the kernel set every read below is scored on, from the loaded predictor as kev.benchmark's report.json takes it
+    # (execute_trial's `torch` / `gpu` say where the trial started; a resume re-scores and replaces this). Scoring runs in
+    # this process only: a full-weight trial's torchrun ranks are train_checkpoint's subprocess.
+    provenance["environment"] = predictor.environment
     write_json(output / "provenance.json", provenance)
     try:
         calibration_records = load_split(suite, "calibration")

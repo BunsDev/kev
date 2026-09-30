@@ -53,6 +53,9 @@ RULES = [
     ("calibration by state-token length is kev.metrics.calibration_by_length (LENGTH_EDGES), and whether a temperature fit set "
      "shares data with a checkpoint's training is kev.rounds.pool_conflicts (round pools and scripts/calibrate_checkpoint.py alike)",
      r"\(8192, 16384, 32768, 65536\)|def (pool_conflicts|calibration_by_length)\(|FIT_SPLITS = ", {"kev/metrics.py", "kev/rounds.py"}),
+    ("the kernel set a read's logits depend on (package versions, the DeltaNet kernels transformers bound, TRITON_F32_DEFAULT) "
+     "is kev.predictors.kernel_environment, which report.json and trial provenance both record",
+     r"getclosurevars|environ\.get\(\"TRITON_F32_DEFAULT\"|version\([\"'](triton|flash-linear-attention|causal-conv1d)[\"']\)", {"kev/predictors.py", "tests/test_unit.py"}),   # the unit test pins the contract
     ("a state's normalised-text hash (text_sha256) is kev.suite.text_digest",
      r"\.casefold\(\)\.split\(\)\)\.encode\(\)", {"kev/suite.py", "kev/data.py"}),   # kev.suite imports kev.data, so kev.data keeps its inline copy
 ]

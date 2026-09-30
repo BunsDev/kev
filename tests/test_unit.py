@@ -1192,6 +1192,46 @@ def test_benchmark_report_records_the_kernel_environment(tiny_base, tmp_path, mo
     assert {k: P.kernel_environment(mlx, "mlx")[k] for k in ("backend", "dtype", "attention", "deltanet")} == {"backend": "mlx", "dtype": "bfloat16", "attention": None, "deltanet": None}
 
 
+def test_trial_provenance_records_the_kernel_environment(tiny_base, tmp_path, monkeypatch):
+    """A trial's reads (kev.experiment.score_trial: calibration, development, mechanism checks, transfer) name the kernel set
+    they were scored on, as kev.benchmark's report.json does: provenance.json and result.json's provenance carry
+    `environment`, the predictor's own (kev.predictors.kernel_environment, after load), next to the fields they always had.
+    Provenance written before the key existed still aggregates and still tells kev.rounds the trial's suite and training."""
+    import json, shutil
+    from kev import experiment as E, predictors as P, rounds
+    from kev.data import load_records
+    from kev.suite import digest, read_json, write_json
+    train_tiny(tiny_base, tmp_path / "full", *FULL, "--max_steps", "1", monkeypatch=monkeypatch)
+    records = [{**r, "_meta": {"id": f"tiny-{i}", "group_id": f"tiny-{i}", "variant": "clean", "source": "tiny"},
+                "questions": {qid: {**q, "src": "tiny"} for qid, q in r["questions"].items()}} for i, r in enumerate(load_records(tiny_base / "data.jsonl")[:3])]
+    monkeypatch.setattr(E, "load_split", lambda suite, split: [] if split == "calibration" else records)   # a legacy trial may have no calibration partition
+    monkeypatch.setattr(E, "read_manifest", lambda suite: {})
+    predictors, real = [], E.LocalPredictor
+    monkeypatch.setattr(E, "LocalPredictor", lambda *a, **k: predictors.append(real(*a, **k)) or predictors[-1])
+    suite, study = E.ROOT / "evals/smoke-v1", tmp_path / "runs/s"
+    E.execute_trial({"base": "tiny"}, suite, study / "00-trial-0", E.source_hashes(), "cpu", existing=tmp_path / "full")
+    provenance = read_json(study / "00-trial-0/provenance.json")
+    [predictor] = predictors
+    assert provenance["environment"] == predictor.environment == read_json(study / "00-trial-0/result.json")["provenance"]["environment"]
+    env = provenance["environment"]
+    assert set(env) == set(P.kernel_environment(predictor.model, "cpu")) and env["device"] == "cpu" and env["gpu"] is None
+    assert env["dtype"] == predictor.model.dtype and env["deltanet"]["forward"].endswith("GatedDeltaNet.forward") and env["packages"]["torch"] == torch.__version__
+    assert {"config", "config_sha256", "suite_sha256", "source_hashes", "git_commit", "platform", "torch", "device", "gpu", "legacy_checkpoint", "measured_checkpoint"} < set(provenance)
+    assert (provenance["torch"], provenance["gpu"], provenance["suite_sha256"]) == (torch.__version__, None, digest(suite / "manifest.json"))
+    # a trial recorded before `environment` existed
+    shutil.copytree(study / "00-trial-0", study / "01-old")
+    for name, path in (("provenance.json", ()), ("result.json", ("provenance",))):
+        data = read_json(study / "01-old" / name); node = data
+        for key in path: node = node[key]
+        del node["environment"]; write_json(study / "01-old" / name, data)
+    E.aggregate(study)
+    ledger = [json.loads(line) for line in (study / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [r["id"] for r in ledger] == ["00-trial-0", "01-old"] and ledger[0] == {**ledger[1], "id": "00-trial-0", "path": str(study / "00-trial-0")}
+    for trial in ("runs/s/00-trial-0", "runs/s/01-old"):
+        assert rounds.trial_suite({}, trial, root=tmp_path) == "evals/smoke-v1"
+        assert rounds.trial_training({}, trial, root=tmp_path) == rounds.recorded_training(digest(suite / "manifest.json"))
+
+
 def test_local_predictor_long_rows_on_mlx_use_its_forward(monkeypatch):
     """The MLX backend (what a hybrid checkpoint resolves to on Apple Silicon) has no forward_batch and its forward already
     runs the state once: a long record goes through model.forward, unlabelled (no CUDA kernels involved)."""

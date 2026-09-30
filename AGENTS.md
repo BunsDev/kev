@@ -85,7 +85,9 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   `kev.jev --suite ... --out ...` scores Jev through Vercel AI Gateway (AI SDK `experimental_evaluate`, node worker in
   `playground/scripts/jev-evaluate.mjs`; needs `AI_GATEWAY_API_KEY` or `--provision-scope`; budget-capped).
 - Studies: `kev.experiment --plan experiments/*.json --suite <suite> --out runs/<study>` runs config-only trials
-  (allowlist + ranges in `experiment.py: DEFAULTS/CHOICES/validated_trial`, provenance, coverage/isolation gates,
+  (allowlist + ranges in `experiment.py: DEFAULTS/CHOICES/validated_trial`, provenance (`provenance.json`, copied into
+  `result.json`; its `environment` is the kernel set the trial's reads were scored on, report.json's block from the same
+  `kev.predictors.kernel_environment`, taken from the loaded predictor and replaced when a resume re-scores; trials before it have none), coverage/isolation gates,
   `results.jsonl` ledger, `--transfer <suite>` for an OOD read per trial, `--aggregate` to rank an existing directory,
   `--resume` for interrupted trials (evaluation; unfinished full-weight trials continue training from their resume point),
   `--wait-pid` to queue behind a training job). A full-weight trial runs under torchrun on every GPU of its container,
