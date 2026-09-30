@@ -4,13 +4,16 @@ LocalPredictor scores a checkpoint in-process; RemotePredictor any TypeSafe Syst
 Jev itself through the AI SDK worker in playground/scripts (budget-capped).
 """
 import contextlib
+import inspect
 import json
 import math
 import os
 import subprocess
+import sys
 import time
 import urllib.request
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import torch
@@ -26,17 +29,56 @@ from kev.suite import CONTEXT
 
 LONG_ROW_KERNELS = "efficient"   # the label of a prediction (and its benchmark rows) that took the long-row kernels below
 
+KERNEL_PACKAGES = ("torch", "transformers", "peft", "flash-linear-attention", "triton", "causal-conv1d", "mlx", "mlx-lm")
+DELTANET_KERNELS = ("causal_conv1d_fn", "torch_chunk_gated_delta_rule")   # the prefill hooks of transformers' GatedDeltaNet
+
+
+def bound_implementation(fn):
+    """The function transformers actually calls for one of its kernel hooks: `use_kernel_func_from_hub_with_fallback`
+    wraps the PyTorch reference and binds the package's kernel (fla, causal-conv1d) as `implementation` when it imports;
+    any other function (unwrapped, or patched in by a caller) is itself. -> "module.qualname"."""
+    impl = inspect.getclosurevars(fn).nonlocals.get("implementation", fn) if inspect.isfunction(fn) else fn
+    return f"{getattr(impl, '__module__', None)}.{getattr(impl, '__qualname__', type(impl).__name__)}"
+
+
+def kernel_environment(model, device):
+    """What a read's logits depend on besides kev's code and the checkpoint (runs/drift-v1/REPORT.md: #125's causal-conv1d
+    kernel moved Kev-27B v1's reads by up to 0.06 in p with no code change): the scoring packages' versions, the GPU, the
+    backbone dtype and, on a torch backbone, the attention implementation and (hybrid) the Gated DeltaNet layer's forward
+    (kev.fused_qwen35 replaces it) and the convolution and chunked delta rule transformers bound. Reads only what is
+    already loaded or imported. Two reads are comparable bit for bit only when this and the kev commit match. Recorded
+    in report.json."""
+    def installed(name):
+        try: return version(name)
+        except PackageNotFoundError: return None
+    packages = {name: installed(name) for name in KERNEL_PACKAGES}
+    packages["torch"] = torch.__version__   # with its build tag (2.8.0+cu128 on the CUDA wheels), which the metadata version drops
+    env = {"packages": packages, "device": str(device),
+           "gpu": torch.cuda.get_device_name(torch.device(device)) if str(device).startswith("cuda") else None,
+           "backend": model.backend, "dtype": model.dtype, "triton_f32_default": os.environ.get("TRITON_F32_DEFAULT"),
+           "attention": None, "deltanet": None}
+    if model.backend != "torch": return env   # kev.mlx_model: mlx-lm's Metal kernels, named by the mlx / mlx-lm versions
+    env["attention"] = getattr(model.lm.config, "_attn_implementation", None)
+    layer = next((m for m in model.lm.modules() if type(m).__name__.endswith("GatedDeltaNet")), None) if model.hybrid else None
+    if layer is not None:
+        module = sys.modules[type(layer).__module__]
+        env["deltanet"] = {"forward": bound_implementation(getattr(layer.forward, "__func__", layer.forward)),
+                           **{name: bound_implementation(getattr(module, name)) for name in DELTANET_KERNELS if hasattr(module, name)}}
+    return env
+
 
 class LocalPredictor:
-    """Scores a checkpoint in-process. Evaluation is fp32-exact (no TF32, no fused SDPA kernels on CUDA), with one
-    exception: on CUDA with the torch backend, a record whose longest row (state + one question) exceeds
-    kev.model.ROW_PASS_TOKENS runs under SDPA's flash / memory-efficient kernels, because the exact math kernel's L x L
-    score matrix does not fit (~200 GB per layer pass at 64k). Such a prediction carries `"kernels": LONG_ROW_KERNELS`,
-    kev.benchmark copies it onto the record's rows and counts them in report.json's `long_rows`; shorter records carry
-    nothing, so their rows and reports are unchanged. The efficient path is CUDA-only: on CPU / MPS attention stays eager
-    and exact and still materialises L x L. A long record on a hybrid torch backbone also runs its state once, its
-    questions continuing from it (kev.shared_prefix), instead of once per question; the MLX backend's forward already
-    runs the state once."""
+    """Scores a checkpoint in-process. Evaluation is fp32-exact in PyTorch (no TF32, no fused SDPA kernels on CUDA). On
+    CUDA a hybrid backbone's Gated DeltaNet layers run flash-linear-attention's Triton kernels, whose dots are TF32, and a
+    bf16 backbone is bf16 throughout, so reads repeat bit for bit only on the same kernel set (`self.environment`, from
+    kernel_environment; AGENTS.md "What fp32-exact guarantees"). One more exception: on CUDA with the torch backend, a
+    record whose longest row (state + one question) exceeds kev.model.ROW_PASS_TOKENS runs under SDPA's flash /
+    memory-efficient kernels, because the exact math kernel's L x L score matrix does not fit (~200 GB per layer pass at
+    64k). Such a prediction carries `"kernels": LONG_ROW_KERNELS`, kev.benchmark copies it onto the record's rows and
+    counts them in report.json's `long_rows`; shorter records carry nothing, so their rows and reports are unchanged. The
+    efficient path is CUDA-only: on CPU / MPS attention stays eager and exact and still materialises L x L. A long record
+    on a hybrid torch backbone also runs its state once, its questions continuing from it (kev.shared_prefix), instead of
+    once per question; the MLX backend's forward already runs the state once."""
 
     def __init__(self, run, device, opts=LoadOptions(), context=CONTEXT):
         """opts.temperature=None scores with the temperature the checkpoint carries; 1.0 scores raw logits. context: the
@@ -52,6 +94,7 @@ class LocalPredictor:
             torch.backends.cuda.enable_flash_sdp(False); torch.backends.cuda.enable_mem_efficient_sdp(False)
         self.tok, self.model = checkpoint.load(device, opts)
         self.temperature = self.model.head.temperature
+        self.environment = kernel_environment(self.model, device)
         self.device = device
         self.context = context
 

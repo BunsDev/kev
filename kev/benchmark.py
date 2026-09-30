@@ -204,6 +204,7 @@ def main():
     report, _ = evaluate_records(records, scorer, a.out, heldout_sources=tuple(heldout), skip_overlong=skip_overlong)
     report.update(suite_sha256=source_hash, data=a.data, date_facts=a.date_facts, rotations=a.rotations, run=a.run or a.remote, split=split,
                   calibration_applied=predictor.temperature != 1.0 if not a.remote else None,
+                  environment=predictor.environment if not a.remote else None,   # the kernel set (kev.predictors.kernel_environment)
                   remote={"base_url": a.remote, "requested_model": a.remote_model, "served_model": predictor.served_model, "concurrency": a.remote_concurrency} if a.remote else None)
     write_json(Path(a.out) / "report.json", report)
     print(json.dumps({"objective": report["objective"], "clean": report["clean"], "coverage": report["coverage"]}, indent=2))
