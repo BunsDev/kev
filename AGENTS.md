@@ -188,7 +188,7 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   (programmatically labelled skill records in seven families: long policy documents, trade-offs, probability, multi-hop,
   temporal/numeric, judging a proposed answer, missing-fact abstention; `scripts/build_hard_v1.py` + `hard_v1_{common,policy,families,numeric}.py`,
   labels from each family's solver over `_meta.facts`, templates 0-3 train / 4 development / 5 test; long_policy states reach ~5k tokens, so train with
-  `--max_state` >= 5120; its 23 MB train partition is not in git and not yet in the kev-suites mirror: the builder regenerates it byte for byte, ~1 min;
+  `--max_state` >= 5120; its 23 MB train partition is not in git; `load_split` fetches it from the kev-suites mirror (since 2026-09-30) and the builder regenerates it byte for byte, ~1 min;
   `scripts/screen_overlap.py` checks it against JevBench's public items, counts only, in `overlap.json`), `evals/devtools-v1`
   (developer-tooling decisions from six licence-checked sources, human / heuristic / by-construction labels, no LLM labels; `scripts/build_devtools_v1.py --reproduce-v1`
   rebuilds it byte for byte from cached downloads; When2Call and prompt injection are eval-only. Known defects, frozen: CodeReviewer ids came from the dataset's
@@ -196,7 +196,7 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   (paired comparisons drop both; 66 more ids repeat inside train or across train and an eval partition, so check train/eval overlap by `text_sha256`),
   and its CodeReviewer `text_sha256` hashes the hunk without `lines_before_hunk`. Without `--reproduce-v1` the builder makes line-based unique ids, keys the
   whole state and admits commitpackft records after their message question is added; see its docstring), and the real-document suites
-  `evals/documents-v1` (CFPB complaint narratives, product + issue Choice questions; its 23 MB train partition, Kev-4B's round-8 delta data, is not in git and not yet in the kev-suites mirror)
+  `evals/documents-v1` (CFPB complaint narratives, product + issue Choice questions; its 23 MB train partition, Kev-4B's round-8 delta data, is not in git; `load_split` fetches it from the kev-suites mirror (since 2026-09-30))
   and `evals/documents-v2` (held-out test only, private mirror, manifest only): `scripts/build_documents_v{1,2}.py` -> `label_documents_v1.py`
   (AI Gateway teachers/judges, spend ledger) -> `freeze_documents_v1.py` (no flag: report + adjudication queue; `--combine`, `--spot-check`, `--freeze ... --min-agreement 47`);
   label provenance in `runs/documents-v1-work/`.
