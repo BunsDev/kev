@@ -177,7 +177,7 @@ The table below uses whole suites (minus two duplicated CodeReviewer ids), with 
 | WANLI-v2 (1,002 NLI pairs) | 0.756 | 0.745 |
 | TypeSafe (89 answered rows) | 0.854 | 0.865 |
 
-SemIf, WANLI-v2 and TypeSafe are report-only; the audit found them unsound as a gate. scienthoon, the support-ticket suite on which Kev-27B v1 was selected, was removed as an evaluation on 2026-09-27, before round 23, so v2 has no scienthoon read. Its SFT parent (round 22's final checkpoint) was 5.5 pp below v1 there [−7.8, −3.2] (`PLAN.md`, "Round 22 result", "scienthoon removed").
+SemIf, WANLI-v2 and TypeSafe were report-only; the audit found them unsound as a gate, and WANLI-v2 and TypeSafe were then retired as Kev evaluations on 2026-09-30 (about a quarter of the WANLI pairs are ones its two annotators labelled differently, with the gold set to one of the two labels; TypeSafe's gold is the averaged answer of two closed frontier models, on too few questions to tell checkpoints apart). Their figures are kept as the record. scienthoon, the support-ticket suite on which Kev-27B v1 was selected, was removed as an evaluation on 2026-09-27, before round 23, so v2 has no scienthoon read. Its SFT parent (round 22's final checkpoint) was 5.5 pp below v1 there [−7.8, −3.2] (`PLAN.md`, "Round 22 result", "scienthoon removed").
 
 **Out-of-domain component suites** (development, report-only). These suites are held-out domains of generators that also produced training components, so they are not independent transfer tests. Accuracy / ECE against Kev-27B v1:
 - ood-v2 (4,988 questions): 0.956 / 0.020 against 0.944 / 0.044.

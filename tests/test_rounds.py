@@ -4,7 +4,8 @@ uses round 24's rule verbatim), and round 20's temperature pools,
 transfer reads and checkpoint arms on a synthetic round; the calibration guards (a temperature pool that shares data with
 an arm's training is refused, every arm's temperature source is recorded, scripts/calibrate_checkpoint.py refuses
 in-distribution rows) and calibration by state length; removed suites (kev.suite.REMOVED_SUITES: scienthoon-v1, archived
-for the rounds that read it, refused after round 22), whose recorded reads reproduce from the committed rows.
+for the rounds that read it, refused after round 22; wanli-v2 and typesafe-v1, refused after round 26; wanli-v1, after
+round 5), whose recorded reads reproduce from the committed rows.
 
 Offline vs archive. Rounds 5-18 ran on the research branch; their trial rows, reads and most committed outputs live on the
 git tag `research-archive-2026-09-24`, not on main. This checkout carries everything the round-5 read-out and the round-15
@@ -87,8 +88,50 @@ def test_no_read_of_a_removed_suite_is_launched(tmp_path, capsys):
     [bench] = rounds.read_commands(spec, arm, root=tmp_path)
     jobs = bench[bench.index("--jobs") + 1].split(",")
     tags = [t for t, _ in rounds.side_reads(spec, arm, spec["rule"], "candidate", rounds.arm_side(spec, arm, tmp_path))]
-    assert "scienthoon" in tags and len(jobs) == len(tags) - 1 and not any("scienthoon" in j for j in jobs)
-    assert "not launching read scienthoon" in capsys.readouterr().out
+    removed = [t for t in tags if rounds.removed_suite(spec["reads"][t]["suite"])]
+    assert sorted(removed) == ["scienthoon", "typesafe", "wanli2"] and len(jobs) == len(tags) - len(removed)
+    assert not any("scienthoon" in j or "wanli-v2" in j or "typesafe-v1" in j for j in jobs)
+    out = capsys.readouterr().out
+    assert all(f"not launching read {t}" in out for t in removed)
+
+
+def test_wanli_v2_is_refused_with_its_reason():
+    """wanli-v2 was removed on 2026-09-30: a quarter of its gold labels are one of two disagreeing annotators' labels."""
+    from kev.suite import REMOVED_SUITES, RemovedSuite, load_split, read_manifest
+    assert REMOVED_SUITES["evals/external/wanli-v2"]["last_round"] == 26
+    assert not (ROOT / "evals/external/wanli-v2").exists()
+    with pytest.raises(RemovedSuite, match="removed on 2026-09-30: unsound as a gate.*annotators"):
+        load_split("evals/external/wanli-v2", "development")
+    with pytest.raises(RemovedSuite, match="removed on 2026-09-30"):
+        read_manifest(ROOT / "evals/external/wanli-v2")
+
+
+@pytest.mark.parametrize("number", [6, 18, 23, 26])
+def test_rounds_up_to_26_list_wanli_v2_and_typesafe_as_archived(number):
+    """Every round that registered a WANLI-v2 or TypeSafe read, through round 26, still validates, with the reads archived."""
+    spec = rounds.load(ROOT / f"experiments/rounds/r{number}.json")
+    problems, archived = rounds.validate(spec, ROOT, rows=False)
+    assert problems == []
+    for tag, suite in (("wanli2", "evals/external/wanli-v2"), ("typesafe", "evals/external/typesafe-v1")):
+        assert any(a.startswith(f"read {tag}: {suite} not in this checkout: removed on 2026-09-30") for a in archived)
+
+
+def test_a_round_after_26_that_reads_wanli_v2_or_typesafe_is_refused():
+    spec = {**rounds.load(ROOT / "experiments/rounds/r26.json"), "round": 27}
+    problems, _ = rounds.validate(spec, ROOT, rows=False)
+    for tag, suite in (("wanli2", "evals/external/wanli-v2"), ("typesafe", "evals/external/typesafe-v1")):
+        refusal = (f"read {tag}: {suite} was removed on 2026-09-30 and may not be read after round 26: "
+                   + rounds.removed_suite(suite)["reason"])
+        assert [p for p in problems if suite in p] == [refusal] and refusal in rounds.launchable(spec)
+
+
+def test_wanli_v1_and_typesafe_v1_are_refused_with_their_reason():
+    from kev.suite import REMOVED_SUITES, RemovedSuite, load_split
+    assert REMOVED_SUITES["evals/external/wanli-v1"]["last_round"] == 5 and REMOVED_SUITES["evals/external/typesafe-v1"]["last_round"] == 26
+    for suite, why in (("evals/external/wanli-v1", "annotators"), ("evals/external/typesafe-v1", "frontier models")):
+        assert not (ROOT / suite).exists()
+        with pytest.raises(RemovedSuite, match=f"removed on 2026-09-30: .*{why}"):
+            load_split(suite, "development")
 
 
 def test_validation_names_what_is_wrong():
@@ -145,8 +188,8 @@ def test_read_commands_batch_one_arm_and_skip_existing_reads(tmp_path):
     [bench] = rounds.read_commands(spec, "27b-r10k-lr2e5", root=tmp_path)
     assert bench[:4] == ["modal", "run", "--detach", "modal_app.py::benchmarks"] and bench[-4:] == ["--gpu", "H200", "--timeout", "14400"]
     jobs = bench[bench.index("--jobs") + 1].split(",")
-    assert len(jobs) == 6 and not any(j.endswith("-hard") for j in jobs)                          # hard exists locally
-    assert not any("scienthoon" in j for j in jobs)                                              # a removed suite is never read again
+    assert len(jobs) == 4 and not any(j.endswith("-hard") for j in jobs)                          # hard exists locally
+    assert not any(rounds.removed_suite(j.split("@")[-2]) for j in jobs)                         # a removed suite is never read again
     assert "/runs/r17-27b/00-trial-0/checkpoint@evals/devtools-v1@r17-27b-r10k-lr2e5-devtools" in jobs
     [locked] = rounds.read_commands(spec, "27b-r10k-lr2e5", stage="locked", root=tmp_path)
     assert locked[:3] == ["modal", "run", "modal_app.py::locked_test"] and locked[locked.index("--name") + 1] == "kev-27b-r17-ungated"

@@ -86,6 +86,8 @@ Per-source out-of-domain accuracy (Kev-9B / Jev): QNLI 0.93 / 0.93, SciQ 0.96 / 
 
 The scienthoon suite was retired as a Kev evaluation on 2026-09-27: its tickets are templated, and one of its three questions (`priority`) depends on an organisational rule that the text does not state (`PLAN.md`). The scienthoon figures on this card are kept as the record of how the release was decided.
 
+WANLI (`wanli-v1`, `wanli-v2`) and TypeSafe's public evals (`typesafe-v1`) were retired as Kev evaluations on 2026-09-30: about a quarter of the WANLI pairs are ones its two annotators labelled differently, with the gold set to one of the two labels, and TypeSafe's gold is the averaged answer of two closed frontier models, on too few questions to tell checkpoints apart (`PLAN.md`, "WANLI and TypeSafe removed"). Their figures on this card are kept as the record.
+
 ## How it was built
 
 - **Base model**: Qwen3.5-9B-Base, a hybrid of 24 Gated DeltaNet (linear attention) layers and 8 full-attention layers. Because the recurrent layers cannot honour a block-causal mask, questions run as separate causal rows that continue from the shared state (`kev/model.py: forward_rows_batch`); isolation is exact by construction (together vs alone within 1e-5) and on attention-only models this form is bit-identical to the packed one.

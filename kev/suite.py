@@ -56,6 +56,32 @@ REMOVED_SUITES = {
                    "closing phrases with disputed conventions"),
         "record": "PLAN.md (Standing rules; 2026-09-27 note); committed rows under runs/ (e.g. runs/r20-scienthoon)",
     },
+    "evals/external/wanli-v2": {
+        "removed": "2026-09-30",
+        "last_round": 26,
+        "reason": ("unsound as a gate: 271 of its 1,002 WANLI test pairs (27 %) are ones WANLI's two crowd annotators labelled "
+                   "differently, and the published gold is one of the two labels; every Kev scores 49-62 % on those against "
+                   "64-81 % on the 731 the annotators agreed on, and the 2026-09-27 audit measured split-half r 0.04 across 23 "
+                   "checkpoints (all within 0.735-0.763), a half-width as wide as its 2 pp bar and ~11 % invalid labels"),
+        "record": "PLAN.md (Standing rules; 2026-09-30 note); committed rows under runs/ (e.g. runs/r23-27b-k-w85-wanli2)",
+    },
+    "evals/external/wanli-v1": {
+        "removed": "2026-09-30",
+        "last_round": 5,
+        "reason": ("the same WANLI test pairs as wanli-v2 (SemIf's 256): 63 of 256 (25 %) are ones WANLI's two crowd annotators "
+                   "labelled differently, and the published gold is one of the two labels"),
+        "record": "PLAN.md (2026-09-30 note); README; committed rows under runs/ (e.g. runs/kev-9b-wanli-v1, runs/jev-wanli-v1)",
+    },
+    "evals/external/typesafe-v1": {
+        "removed": "2026-09-30",
+        "last_round": 26,
+        "reason": ("unsound as a gate: its gold is not a ground truth but the argmax of the average of two closed frontier models' "
+                   "answers (evals.typesafe.ai: GPT-6 Astra and Claude Fable 5.1), 13 of its 102 reference distributions put "
+                   "the answer below 0.75 (the two references split), and on 89 answered questions from 20 cases the split-half "
+                   "correlation across 20 Kev-27B checkpoints is -0.01 (2026-09-27 audit: -0.27): its differences between "
+                   "checkpoints are noise"),
+        "record": "PLAN.md (Standing rules; 2026-09-30 note); README; committed rows under runs/ (e.g. runs/kev-9b-typesafe-v1)",
+    },
 }
 
 

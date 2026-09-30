@@ -22,7 +22,8 @@ KEYS = ("n", "acc", "brier", "ece", "confident_error_rate", "coverage_at_5pct_er
 READS = ("docs1_dev", "docs1_test", "docs2", "long2", "r6test", "long3", "hard_dev", "devtools_dev", "hard_test", "devtools_test",
          "transfer_dev", "breadth_dev", "breadth_test", "r3test",
          "semif", "scienthoon", "wanli2", "typesafe")   # optional per release; the report keeps this order
-# scienthoon: removed as an eval on 2026-09-27 (kev.suite.REMOVED_SUITES); kept so the recorded releases reproduce from their committed rows
+# scienthoon (removed 2026-09-27), wanli2 and typesafe (removed 2026-09-30): no longer evals (kev.suite.REMOVED_SUITES); kept so the
+# recorded releases reproduce from their committed rows
 JEV_DOCS = "runs/jev-documents-v1/rows.json"   # Jev's documents-v1 development rows (research checkout); reported when present
 
 

@@ -175,9 +175,13 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   Manifests pin dataset + base revisions and the sha256 of every partition. Current: `evals/v7/decision-v7` (the release
   recipe), `evals/v8/decision-v8`, `evals/v4/transfer-v4` and `evals/v9/transfer-v9` (MMLU-Pro, buried states,
   unknowable) for OOD, `evals/round3/{decision-r3,transfer-r3}` (calibration audit; the 1,260-record final panel was
-  read by the 2026-09-22 release confirmation and has been a short-state guard since round 11), `evals/smoke-v1` for tests, plus `evals/external/` (semif-v1, ekzhang-mmlupro-v1, and SemIf's pinned third-party selections wanli-v1 + typesafe-v1 via
-  `scripts/freeze_semif_external.py`; `scripts/compare_typesafe.py` reports equal-case agreement/TVD against the reference and published answers, `--tokenizer` adds accuracy by state length; Kev-9B/4B scored 2026-09-22: WANLI 0.703/0.695 vs Jev 0.758, TypeSafe 0.809/0.856 agreement on 89 answered rows vs 0.891, `runs/kev-*-{wanli,typesafe}-v1`; `external/scienthoon-v1` was removed on 2026-09-27, unsound as a gate: `kev.suite.REMOVED_SUITES` refuses a read with the reason, and from round 23
-  no pooled-externals guard either: round 24's audited rule, which round 23 follows, reports SemIf, WANLI-v2 and TypeSafe without gating them (PLAN.md, standing rules)),
+  read by the 2026-09-22 release confirmation and has been a short-state guard since round 11), `evals/smoke-v1` for tests, plus `evals/external/` (semif-v1, report only: sound labels but saturated, 130 of 144 right for every Kev-27B checkpoint;
+  ekzhang-mmlupro-v1). Removed as unsound for a gate (`kev.suite.REMOVED_SUITES` refuses a read with the reason; the committed rows
+  under `runs/`, e.g. `runs/kev-*-{wanli,typesafe}-v1`, stay as the record): `external/scienthoon-v1` on 2026-09-27, and on
+  2026-09-30 `external/wanli-v2` and `wanli-v1` (a quarter of the pairs have two disagreeing annotators and a gold set to one of
+  them) and `external/typesafe-v1` (gold = the argmax of two closed frontier models' averaged answers; split-half r about 0 across
+  checkpoints), with their builder `scripts/freeze_semif_external.py` and `scripts/compare_typesafe.py`. There is no pooled-externals guard:
+  round 24's audited rule, which rounds 23-26 follow, reported SemIf, WANLI-v2 and TypeSafe without gating them (PLAN.md, standing rules)),
   `evals/night2/` (delta training data, `scripts/build_night2_data.py`), `evals/diagnostics/` (binding-v1), `evals/hard-v1`
   (programmatically labelled skill records in seven families: long policy documents, trade-offs, probability, multi-hop,
   temporal/numeric, judging a proposed answer, missing-fact abstention; `scripts/build_hard_v1.py` + `hard_v1_{common,policy,families,numeric}.py`,

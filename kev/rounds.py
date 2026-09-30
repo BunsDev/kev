@@ -73,7 +73,8 @@ are a training corpus's (in distribution: round 19's failure mode). From round 2
 confirmation with a temperature-dependent criterion must register a `temperature` pool: validate and launch refuse it
 otherwise; earlier rounds get a warning, so their recorded specs keep validating.
 
-Removed suites (kev.suite.REMOVED_SUITES: evals/external/scienthoon-v1, removed 2026-09-27, last read by round 22). A round
+Removed suites (kev.suite.REMOVED_SUITES: evals/external/scienthoon-v1, removed 2026-09-27, last read by round 22;
+evals/external/wanli-v2 and typesafe-v1, removed 2026-09-30, last read by round 26; wanli-v1, last read by round 5). A round
 up to the suite's `last_round` that reads one validates with the read listed under `archived`; its read-out and
 confirmations are computed from the committed rows as before (they need rows, not the suite). A later round that names
 one is refused with the reason, and no read of one is launched again (read_commands skips it; kev.suite.load_split refuses it).

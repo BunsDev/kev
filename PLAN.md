@@ -261,9 +261,11 @@ These are the methods that held up. `docs/autoresearch.md` turns them into an op
   keep their registered rules and committed rows (`kev.rounds validate` lists the read as archived; read-outs reproduce from
   the rows). `load_split` refuses the suite, and `validate` / `launch` refuse any later round that names it.
   `evals/external/scienthoon-v1` was removed on 2026-09-27 (last read: round 22; "scienthoon removed" below). From round 23
-  there is no scienthoon guard. There is no pooled-externals guard either: SemIf, WANLI-v2 and TypeSafe are reported, not
+  there is no scienthoon guard. There is no pooled-externals guard either: SemIf, WANLI-v2 and TypeSafe were reported, not
   gated. The 2026-09-27 audit found that panel unsound without scienthoon (81 % WANLI, split-half r 0.08; round 24),
-  and round 23 was re-registered on round 24's rule.
+  and round 23 was re-registered on round 24's rule. `evals/external/wanli-v2`, `wanli-v1` and `typesafe-v1` were removed on
+  2026-09-30 (last read: round 26, round 5 for wanli-v1; "WANLI and TypeSafe removed" below). From round 27 SemIf is the only
+  external read, report only.
 - **Budgets and state.** A spend authorization per session, checked before every launch against metered spend plus running
   admission bounds; a state file with every spawn id, bound, pull and read.
 - **Report negative results as fully as positive ones**, in PLAN.md, with the failed criterion.
@@ -1031,6 +1033,42 @@ What changes and what does not:
   `validate` / `launch` refuse a round that still names the suite. The "Next" items on a scienthoon remedy are closed.
   (Superseded on 2026-09-28: round 24's audited rule gates no pooled externals, and round 23 was re-registered on it, so
   the three suites are reported, not gated; standing rules.)
+
+## WANLI and TypeSafe removed (2026-09-30)
+
+Jared removed `evals/external/wanli-v2`, `evals/external/wanli-v1` and `evals/external/typesafe-v1` from Kev on 2026-09-30,
+with their builder (`scripts/freeze_semif_external.py`) and `scripts/compare_typesafe.py`; they remain in git history. The
+2026-09-27 audit had already made them report-only (round 24's rule). The check that removed them:
+- *WANLI (v2: 1,002 pairs, v1: SemIf's 256).* WANLI publishes each test pair's two crowd annotations
+  (`anonymized_annotations.jsonl` at the pinned revision `61c95318`). The two annotators disagree on 271 of wanli-v2's 1,002
+  pairs (27 %) and 63 of wanli-v1's 256 (25 %), and the published gold is always one of the two labels: on those pairs the
+  gold is a coin flip between people. Every Kev scores far lower there (development rows, as served):
+
+  | | agreed (731) | disputed (271) |
+  |---|---|---|
+  | Kev-27B v2 (`runs/r23-27b-k-w85-wanli2`) | 0.808 | 0.616 |
+  | Kev-9B | 0.802 | 0.572 |
+  | Kev-4B | 0.767 | 0.491 |
+  | Kev-0.8B | 0.644 | 0.487 |
+
+  Round 18's 9B arm (a), which failed the WANLI-v2 guard, is −0.6 pp on the agreed pairs and −3.0 pp on the disputed ones
+  against the released Kev-9B. The audit had measured split-half r 0.04 across 23 checkpoints, all within 0.735-0.763, a
+  half-width (1.95-2.10 pp) as wide as the 2 pp bar and ~11 % invalid labels.
+- *TypeSafe (`typesafe-v1`, 102 questions over 20 cases, 89 answered at the 8k context they were scored under).* The gold is
+  the argmax of TypeSafe's reference distribution, which evals.typesafe.ai describes as the average of two closed frontier
+  models' answers (GPT-6 Astra and Claude Fable 5.1, high thinking). It measures agreement with those models, not correctness,
+  and 13 of the 102 references put their answer below 0.75 (the two split). Across 20 Kev-27B checkpoints the split-half
+  correlation is −0.01 (audit: −0.27), 70 of the 89 are right for all of them, and the rest does not rank checkpoints.
+- *SemIf (`semif-v1`, 144 authored decisions) stays, report only.* Its labels hold up: of the 14 questions some Kev-27B
+  checkpoint misses, the misses are genuine hard cases (neither candidate authorises the action, so the answer is
+  insufficient), not label errors. But it is saturated (0.931-0.979 across 20 Kev-27B checkpoints, 130 of 144 right for all,
+  split-half r 0.19), so it is a sanity check, not a ranking.
+
+What changes and what does not: past verdicts stand as registered (rounds 5-26 read these suites; their read-outs and
+confirmations reproduce from the committed rows, `kev.suite.REMOVED_SUITES` archives the reads). From round 27 no round
+may read them. The README's external table keeps SemIf only; the model cards keep their WANLI and TypeSafe figures as the
+record. Round 18's 9B arm (a) failed only WANLI-v2, scienthoon and the pooled externals, all now removed or ungated; whether
+it is a Kev-9B candidate is a question for a new registered round on round 24's rule, not a re-reading of round 18.
 
 ## Round 24 (registered)
 
@@ -2618,6 +2656,7 @@ outcomes.
 | Release: Kev-27B v2 | 09-30 | round 23's `27b-k-w85` published to `jaredpalmer/kev-27b` main (full bf16 weights `d27af6ab…`, head `7968f17b…`, T 1.3195) in one commit that deleted v1's adapter files; v1 tagged `v1-lora` first | **released**; anonymous Hub load reproduced round 23's semif-v1 and transfer-v4 development reads row for row; `@v1-lora` loads v1 at T 1.38 | `runs/release/kev-27b-r23-published.json`; `runs/rel27-public/`; "Released: Kev-27B v2" |
 | Round 25 | 09-28/29 | continued full-weight SFT from Kev-27B (LoRA merged) on `sft-v2-r25` (breadth + b1v2 replay, no long-document families, states ≤ 16k), lr 1e-6 / 2e-6, 8 candidates (snapshots + finals), round 24's rule | no candidate (0 of 8): every arm fails breadth ECE (0.023-0.035 vs 0.0176); lr 1e-6 s75 / final fail only that (11/12); lr 2e-6 also short-state accuracy and the breadth primary; CUAD accuracy held, CUAD ECE did not; none ahead of `27b-k-w85` (report only) | `r25.json`; `runs/r25-readout`; "Round 25 result" |
 | Round 26 | 09-29 | round 25's lr 1e-6 arm with tasksource-v1 doubled (`sft-v2-r26`: sft-v2-r25 + 13,000 tasksource-v1 records, 58,515), one study, 4 candidates, round 24's rule | no candidate (0 of 4): every arm fails breadth ECE (0.020-0.029 vs 0.0176); the final fails only that (11/12), the snapshots also the breadth primary, s50 also short-state accuracy; against round 25's lr 1e-6 arm breadth and breadth ECE level (report only); none ahead of `27b-k-w85` (report only) | `r26.json`; `runs/r26-readout`; "Round 26 result" |
+| WANLI and TypeSafe removed | 09-30 | `evals/external/{wanli-v2, wanli-v1, typesafe-v1}` removed as unsound for a gate (a quarter of WANLI's gold labels are one of two disagreeing annotators'; TypeSafe's gold is two closed frontier models' averaged answer, split-half r about 0) | past verdicts stand; SemIf is the only external read from round 27, report only | "WANLI and TypeSafe removed"; `kev.suite.REMOVED_SUITES` |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |
 
 Older milestones, all in `A:PLAN.md` (sections named in parentheses):

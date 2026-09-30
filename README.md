@@ -343,15 +343,13 @@ These commands use development data. Test data requires `--allow-test`. The benc
 
 **Dates.** Kev can't subtract dates reliably, but it can use a day count it's given. `KEV_DATE_FACTS=1` appends one sentence per pair of dates in the state ("June 26, 2026 is 8 days before July 4, 2026"). On the deadline policy questions this takes Kev-9B from 0.80 to 0.90 (Jev 0.93). None of the tables use it.
 
-**Other people's test sets.** `evals/external/` holds test sets from other projects, converted to this format, with their published live Jev results. [SemIf](https://github.com/TheoLeeCJ/SemIf) uses the last two to compare its own models, and they are rebuilt from the same hash-verified sources with `scripts/freeze_semif_external.py`. Some were scored on earlier versions of the Kev weights, which the Kev column names. Another, scienthoon's synthetic support tickets, was removed on 2026-09-27 because it cannot serve as a gate (templated text; one of its three questions depends on a rule the text does not state); the model cards keep the scienthoon numbers their releases were decided on.
+**Other people's test sets.** `evals/external/` holds test sets from other projects, converted to this format, with their published live Jev results. Some were scored on earlier versions of the Kev weights, which the Kev column names. Three were removed because they cannot serve as a gate, and the model cards keep the numbers their releases were decided on: scienthoon's synthetic support tickets on 2026-09-27 (templated text; one of its three questions depends on a rule the text does not state), and on 2026-09-30 WANLI (`wanli-v1`, `wanli-v2`: a quarter of the pairs are ones WANLI's two annotators labelled differently, with the gold set to one of them) and TypeSafe's public evals (`typesafe-v1`: the gold is the averaged answer of two closed frontier models, and on 89 questions it cannot tell checkpoints apart).
 
 | Suite | What it is | Jev | Kev |
 |---|---|---|---|
 | [SemIf](https://github.com/TheoLeeCJ/SemIf) | 144 authored decisions | 0.965 | 0.917 (Kev-9B at `v7-base`) |
-| `wanli-v1` | 256 WANLI test pairs: supported, insufficient or contradicted | 0.758 | 0.703 (Kev-9B), 0.695 (Kev-4B at `night2-du-release`) |
-| `typesafe-v1` | The 102 public evals.typesafe.ai questions over 20 cases: agreement / distance on the 89 that fit | 0.891 / 0.125 | 0.809 / 0.226 (Kev-9B), 0.856 / 0.231 (Kev-4B at `night2-du-release`) |
 
-Kev trails Jev on WANLI and TypeSafe's evals. SemIf reports 0.637 balanced accuracy on WANLI for untrained Qwen3.5-4B. TypeSafe's cases are scored the way SemIf scores them (`scripts/compare_typesafe.py`): agreement with the reference answer and total-variation distance to the reference distribution, averaged within each case and then over cases. The published TypeSafe answers score 0.883 / 0.127 on the same rows. The documents are long, and 13 of them exceeded the 8,192-token serving context these were scored under; counting those as wrong, Kev-9B scores 0.728 / 0.304 and Kev-4B 0.770 / 0.308 over all 102. Document length explains part of the gap: Kev-9B answers 0.92 of the 26 documents inside its 384-token training context and 0.75 to 0.79 of the longer ones (Kev-4B 0.88, then 0.81 to 0.88).
+SemIf's labels hold up, but it is close to saturated: every Kev-27B checkpoint answers 130 of the 144 correctly, so it is a sanity check, not a way to rank models.
 
 ## Serving Performance
 

@@ -2627,7 +2627,6 @@
   {
     "printed": "0.758",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md",
       "docs/model-cards/kev-4b.md"
     ],
@@ -2638,61 +2637,8 @@
     ]
   },
   {
-    "printed": "0.891",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/jev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/jev-typesafe-v1",
-      "evaluated",
-      "equal_case_modal_agreement"
-    ]
-  },
-  {
-    "printed": "0.125",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/jev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/jev-typesafe-v1",
-      "evaluated",
-      "equal_case_total_variation"
-    ]
-  },
-  {
-    "printed": "0.883",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/jev-typesafe-v1/comparison.json",
-    "path": [
-      "published",
-      "typesafe",
-      "evaluated",
-      "equal_case_modal_agreement"
-    ]
-  },
-  {
-    "printed": "0.127",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/jev-typesafe-v1/comparison.json",
-    "path": [
-      "published",
-      "typesafe",
-      "evaluated",
-      "equal_case_total_variation"
-    ]
-  },
-  {
     "printed": "0.703",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/kev-9b-wanli-v1/report.json",
@@ -2704,7 +2650,6 @@
   {
     "printed": "0.695",
     "in": [
-      "README.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/kev-4b-wanli-v1/report.json",
@@ -2716,7 +2661,6 @@
   {
     "printed": "0.809",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2730,7 +2674,6 @@
   {
     "printed": "0.226",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2744,7 +2687,6 @@
   {
     "printed": "0.728",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2758,7 +2700,6 @@
   {
     "printed": "0.304",
     "in": [
-      "README.md",
       "docs/model-cards/kev-9b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2786,7 +2727,6 @@
   {
     "printed": "0.231",
     "in": [
-      "README.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2800,7 +2740,6 @@
   {
     "printed": "0.770",
     "in": [
-      "README.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2814,7 +2753,6 @@
   {
     "printed": "0.308",
     "in": [
-      "README.md",
       "docs/model-cards/kev-4b.md"
     ],
     "source": "runs/kev-typesafe-v1/comparison.json",
@@ -2917,34 +2855,6 @@
     "path": [
       "coverage",
       "evaluated_records"
-    ]
-  },
-  {
-    "printed": "0.92",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/kev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/kev-9b-typesafe-v1",
-      "accuracy_by_state_tokens",
-      "0-384",
-      "acc"
-    ]
-  },
-  {
-    "printed": "0.75",
-    "in": [
-      "README.md"
-    ],
-    "source": "runs/kev-typesafe-v1/comparison.json",
-    "path": [
-      "runs",
-      "runs/kev-9b-typesafe-v1",
-      "accuracy_by_state_tokens",
-      "384-2048",
-      "acc"
     ]
   },
   {
