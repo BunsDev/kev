@@ -14,6 +14,13 @@ backbone is written by kev.full_ft.write_backbone, the function a full-weight ru
 so names, shard layout and config.json are what kev.train --full_ft writes. Refused like interpolate_checkpoint's --toward:
 DoRA and other LoRA variants, LoRA biases, modules_to_save, trained token embeddings.
 
+`--weights_dtype bf16` writes an fp32-trained LoRA checkpoint (every Kev below 27B) as a bf16 full-weight checkpoint: the
+merge stays in fp32 and each tensor is rounded to bf16 once, round(fp32(W) + fp32(delta)), the arithmetic of the served
+merge on both backends (LoadOptions.merge, kev.mlx_model.merge_lora). Tensors the base stores in bf16 come back exactly;
+the few it stores in fp32 (the Qwen3.5 bases: A_log and the gated-norm weight of each DeltaNet layer) are rounded, as in
+every bf16 full-weight export. That is what the MLX full-weight path is checked against on the small Kevs
+(tests/test_mlx.py, runs/mlx-full-*). head.pt then says bf16.
+
 head.pt: the LoRA checkpoint's meta and pointer head unchanged (same tensors, head_dim, temperature and its fit, training
 args), with lora = 0 and weights = "full" (the loader rule and --init_from's COMPAT_FIELDS read those) and `merged_lora`
 added: {source: {path, resolved, weights_sha256, head_sha256}, base, adapted_tensors, formula}. Tokenizer files are copied;
@@ -52,8 +59,13 @@ def weights_sha256(ck, workers=8):
     return hashlib.sha256("".join(f"{p.name}:{d}\n" for p, d in zip(shards, digests)).encode()).hexdigest()
 
 
-def merge(lora, out, like=None, log=print):
-    """Write <out>/checkpoint (a full-weight checkpoint) from the LoRA checkpoint `lora` (directory or Hub id[@rev]). -> the report."""
+WRITE_DTYPES = {"bf16": torch.bfloat16}   # --weights_dtype: what an fp32-trained checkpoint may be written as (module docstring)
+
+
+def merge(lora, out, like=None, log=print, weights_dtype=None):
+    """Write <out>/checkpoint (a full-weight checkpoint) from the LoRA checkpoint `lora` (directory or Hub id[@rev]). -> the report.
+    weights_dtype: None = the checkpoint's own weights dtype; "bf16" = merged in the checkpoint's dtype, then rounded once to bf16."""
+    if weights_dtype not in (None, *WRITE_DTYPES): raise ValueError(f"--weights_dtype must be one of {sorted(WRITE_DTYPES)}; got {weights_dtype!r}")
     out = Path(out)
     target, partial = out / "checkpoint", out / "checkpoint.partial"
     if target.exists(): raise FileExistsError(f"refusing to overwrite {target}")
@@ -80,17 +92,22 @@ def merge(lora, out, like=None, log=print):
             w.copy_((w.float() + module.get_delta_weight("default").float()).to(w.dtype))   # the backbone's own parameter (shared storage)
     lm = model.unload()   # peft: the LoRA layers replaced by their base layers, nothing merged again (they hold W + delta already)
     adapted = len(layers)
+    del plain, layers   # they share the backbone's storage: dropped, the cast below frees each fp32 tensor as it goes
+    trained = ck.meta.weights_dtype
+    if weights_dtype and weights_dtype != trained:
+        lm.to(WRITE_DTYPES[weights_dtype])   # the one rounding of the merged fp32 values (in place, tensor by tensor)
     lm.config.use_cache = False   # as kev.train sets it before a full-weight save: config.json is a full-weight run's (scoring passes use_cache itself)
     phase("merge", started)
     if partial.exists(): shutil.rmtree(partial)   # an earlier attempt that died before its rename: never a checkpoint
     partial.mkdir(parents=True)
     started = time.time(); write_backbone(lm, partial, None); phase("write_backbone", started)
-    del model, lm, plain, layers
+    del model, lm
     for p in Path(ck.path).iterdir():
         if p.is_file() and p.name not in NOT_COPIED: shutil.copy2(p, partial / p.name)
     meta = ck.meta
-    meta.lora, meta.weights = 0, "full"
-    meta.extra["merged_lora"] = {"source": source, "base": f"{meta.base}@{meta.base_revision}", "adapted_tensors": adapted, "formula": FORMULA}
+    meta.lora, meta.weights, meta.weights_dtype = 0, "full", weights_dtype or trained
+    meta.extra["merged_lora"] = {"source": source, "base": f"{meta.base}@{meta.base_revision}", "adapted_tensors": adapted, "formula": FORMULA,
+                                 **({"weights_dtype": {"trained": trained, "written": weights_dtype}} if weights_dtype and weights_dtype != trained else {})}
     write_meta(partial, meta)
     merged = Checkpoint(partial)
     if not merged.full: raise RuntimeError(f"{partial} does not load as a full-weight checkpoint")
@@ -118,8 +135,9 @@ def main():
     ap.add_argument("--lora", required=True, help="LoRA checkpoint directory or Hub id[@rev] (pin the revision)")
     ap.add_argument("--out", required=True, help="output directory; the checkpoint goes to <out>/checkpoint, the report to <out>/merge.json")
     ap.add_argument("--like", help="a full-weight checkpoint of the same base whose tensor names and shapes the result must have")
+    ap.add_argument("--weights_dtype", choices=sorted(WRITE_DTYPES), help="write an fp32-trained checkpoint in this dtype (one rounding after the fp32 merge); default: as trained")
     a = ap.parse_args()
-    merge(a.lora, a.out, a.like)
+    merge(a.lora, a.out, a.like, weights_dtype=a.weights_dtype)
 
 
 if __name__ == "__main__":

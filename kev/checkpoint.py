@@ -106,8 +106,9 @@ class LoadOptions:
                  Qwen3.5 backbones through mlx-lm; the pointer head and encoder are shared; refused for attention-only
                  bases, which MPS already runs well). "auto" = mlx when the device is mps, the base is hybrid, mlx-lm is
                  installed and fp32 was not asked for (an explicit dtype=float32 means "the exact path"), else torch;
-                 kev.serve uses auto. The MLX path always merges the adapter and ignores `attn` and `dtype` (the backbone
-                 runs as stored, bf16).
+                 kev.serve uses auto. The MLX path always merges a LoRA adapter, loads a full-weight checkpoint as
+                 saved (no merge, no copy: kev.mlx_model.load_full), and ignores `attn` and `dtype` (the backbone runs
+                 as stored: bf16 for every released checkpoint).
     cuda_graphs  replay the serving passes of a hybrid backbone on CUDA (state prefix, question rows on a cached state) as
                  CUDA graphs, batched across requests (kev.cuda_graphs, DecisionModel.probs_batch). None = off, the eager
                  path every reported number uses; kev.serve turns it on for CUDA. Exact up to floating-point
@@ -210,21 +211,24 @@ class Checkpoint:
         return datetime.date.fromtimestamp(self.file("head.pt").stat().st_mtime).isoformat()
 
     def hybrid_base(self):
-        """Whether the base has Gated DeltaNet layers (Qwen3.5), read from its config without loading weights."""
+        """Whether the backbone has Gated DeltaNet layers (Qwen3.5), read from a config without loading weights: the base's
+        for a LoRA adapter, the checkpoint's own config.json for full weights (the backbone that is actually loaded)."""
         from transformers import AutoConfig
-        return is_hybrid(AutoConfig.from_pretrained(self.meta.base, revision=self.meta.base_revision).get_text_config())
+        config = AutoConfig.from_pretrained(self.path) if self.full else AutoConfig.from_pretrained(self.meta.base, revision=self.meta.base_revision)
+        return is_hybrid(config.get_text_config())
 
     def backend(self, device, opts=LoadOptions()):
         """The backend `load` will use: LoadOptions.backend resolved ("auto" -> mlx only where it pays and is installed)."""
         if opts.backend not in LoadOptions.BACKENDS: raise ValueError(f"unknown backend {opts.backend!r}")
         if opts.backend != "auto": return opts.backend or "torch"
         exact = opts.dtype is torch.float32   # KEV_DTYPE=fp32: the caller wants the reported-numbers path, not a faster one
-        return "mlx" if str(device) == "mps" and not exact and mlx_available() and not self.full and self.hybrid_base() else "torch"
+        return "mlx" if str(device) == "mps" and not exact and mlx_available() and self.hybrid_base() else "torch"
 
     def load(self, device, opts=LoadOptions()):
         """-> (tokenizer, model) in eval mode with the LoRA applied (or the full backbone loaded) and the pointer head loaded. The model is a
         DecisionModel (torch) or an MLXDecisionModel (backend mlx); both expose the same scoring interface."""
         meta = self.meta
+        if self.full and opts.lora_scale != 1: raise ValueError("lora_scale interpolates an adapter; a full-weight checkpoint has none")
         tok = load_tokenizer(meta.base, revision=meta.base_revision)
         m = self._load_mlx(tok, opts) if self.backend(device, opts) == "mlx" else self._load_torch(tok, device, opts)
         m.head.load_state_dict(meta.head); m.eval()
@@ -232,15 +236,22 @@ class Checkpoint:
         return tok, m
 
     def _load_mlx(self, tok, opts):
-        if self.full: raise ValueError("the MLX backend merges an adapter into the base; full-weight checkpoints run on backend=torch")
-        from .mlx_model import MLXDecisionModel, merge_lora   # after the refusal: without mlx-lm the import would hide it
-        if not opts.merge: raise ValueError("the MLX backend always merges the adapter (KEV_MERGE=0 needs backend=torch)")
+        """-> MLXDecisionModel. A LoRA checkpoint: the base's mlx-lm model with the adapter merged (fp32, one rounding). A
+        full-weight checkpoint: mlx-lm's model built from the checkpoint's own config and shards in the dtype head.pt names
+        (kev.mlx_model.load_full; strict names/shapes/dtype), nothing merged. Refusals come before the mlx-lm import, which
+        would otherwise hide them on a machine without it."""
+        full = self.full
+        if not full and not opts.merge: raise ValueError("the MLX backend always merges the adapter (KEV_MERGE=0 needs backend=torch)")
         if self.meta.option_isolation: raise ValueError("option_isolation needs the packed mask; not available on the MLX backend")
-        if not self.hybrid_base(): raise ValueError(f"the MLX backend is for the hybrid (Qwen3.5) bases; {self.meta.base} is attention-only and runs on MPS with backend=torch")
-        base_dir = resolve_run(f"{self.meta.base}@{self.meta.base_revision or ''}")   # the base snapshot the torch path already cached
-        m = MLXDecisionModel(base_dir, pad_id(tok), head_dim=self.meta.head_dim)
-        merge_lora(m.lm, self.path, opts.lora_scale)
-        return m
+        if not self.hybrid_base(): raise ValueError(f"the MLX backend is for the hybrid (Qwen3.5) bases; {self.path if full else self.meta.base} is attention-only and runs on MPS with backend=torch")
+        dtype = self.saved_dtype() if full else None
+        from .mlx_model import MLXDecisionModel, load_base, load_full, merge_lora
+        if full:
+            lm = load_full(self.path, self.shards(), dtype)
+        else:
+            lm = load_base(resolve_run(f"{self.meta.base}@{self.meta.base_revision or ''}"))   # the base snapshot the torch path already cached
+            merge_lora(lm, self.path, opts.lora_scale)
+        return MLXDecisionModel(lm, pad_id(tok), head_dim=self.meta.head_dim)
 
     def _load_torch(self, tok, device, opts):
         m, merged = self._full_torch(tok, device, opts) if self.full else self._adapted_torch(tok, device, opts)
@@ -255,19 +266,23 @@ class Checkpoint:
 
     SAVED_DTYPES = {"bf16": "bfloat16", "fp32": "float32"}   # head.pt weights_dtype -> the dtype save_pretrained writes to config.json
 
-    def _full_torch(self, tok, device, opts):
-        """-> (model, True). Full weights load in the dtype head.pt's `weights_dtype` names (bf16 for every kev.train
-        --full_ft run: the dtype they were trained in), which must be the dtype save_pretrained recorded in config.json;
-        otherwise a mislabelled export would be silently cast (fp32 weights rounded to bf16, or bf16 upcast to twice the
-        memory). An explicit dtype still casts on purpose (fp32: the same values computed in fp32). Nothing to merge."""
-        if opts.lora_scale != 1: raise ValueError("lora_scale interpolates an adapter; a full-weight checkpoint has none")
-        meta = self.meta
+    def saved_dtype(self):
+        """A full-weight checkpoint's dtype name ("bfloat16" | "float32"): the one head.pt's `weights_dtype` names (bf16 for
+        every kev.train --full_ft run: the dtype they were trained in), which must be the dtype save_pretrained recorded in
+        config.json; otherwise a mislabelled export would be silently cast (fp32 weights rounded to bf16, or bf16 upcast to
+        twice the memory). Both backends load full weights in it."""
         cfg = json.loads(self.file("config.json").read_text(encoding="utf-8"))
-        expected, saved = self.SAVED_DTYPES.get(meta.weights_dtype), cfg.get("dtype") or cfg.get("torch_dtype")
+        expected, saved = self.SAVED_DTYPES.get(self.meta.weights_dtype), cfg.get("dtype") or cfg.get("torch_dtype")
         if expected is None or saved not in (None, expected):
-            raise ValueError(f"{self.path}: config.json records the weights as {saved} but head.pt says weights_dtype={meta.weights_dtype!r}")
+            raise ValueError(f"{self.path}: config.json records the weights as {saved} but head.pt says weights_dtype={self.meta.weights_dtype!r}")
+        return expected
+
+    def _full_torch(self, tok, device, opts):
+        """-> (model, True). Full weights load in `saved_dtype`; an explicit dtype still casts on purpose (fp32: the same
+        values computed in fp32). Nothing to merge (`load` refuses lora_scale for full weights on either backend)."""
+        meta = self.meta
         return DecisionModel(meta.base, tok, device, head_dim=meta.head_dim, option_isolation=meta.option_isolation,
-                             dtype=opts.dtype or getattr(torch, expected), attn=opts.attn, weights=self.path), True
+                             dtype=opts.dtype or getattr(torch, self.saved_dtype()), attn=opts.attn, weights=self.path), True
 
     def _adapted_torch(self, tok, device, opts):
         """-> (model, whether the adapter was merged): the base with this checkpoint's LoRA."""

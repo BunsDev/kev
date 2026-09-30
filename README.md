@@ -31,7 +31,7 @@ Start with Kev-4B. Move to Kev-9B if you have a bigger GPU, or to Kev-27B if you
 | [Kev-0.8B](https://huggingface.co/jaredpalmer/kev-0.8b) | Qwen3.5-0.8B-Base | 0.648 / 0.697 | 0.827 / 0.838 | 0.481 / 0.416 | Any Apple Silicon Mac, L4 | [Details](docs/model-cards/kev-0.8b.md) |
 | [Kev-4B](https://huggingface.co/jaredpalmer/kev-4b) | Qwen3.5-4B-Base | 0.817 / 0.838 | 0.873 / 0.865 | 0.269 / 0.242 | 32 GB Mac, L40S, H100 | [Details](docs/model-cards/kev-4b.md) |
 | [Kev-9B](https://huggingface.co/jaredpalmer/kev-9b) | Qwen3.5-9B-Base | 0.820 / 0.852 | 0.874 / 0.873 | 0.289 / 0.217 | 32 GB Mac, L40S, H100 | [Details](docs/model-cards/kev-9b.md) |
-| [Kev-27B](https://huggingface.co/jaredpalmer/kev-27b) | Qwen3.8-27B (post-trained) | **0.851 / 0.889** | 0.865 / 0.866 | **0.225 / 0.156** | B200, H200, H100 80 GB | [Details](docs/model-cards/kev-27b.md) |
+| [Kev-27B](https://huggingface.co/jaredpalmer/kev-27b) | Qwen3.8-27B (post-trained) | **0.851 / 0.889** | 0.865 / 0.866 | **0.225 / 0.156** | B200, H200, H100 80 GB; 96–128 GB Mac (expected) | [Details](docs/model-cards/kev-27b.md) |
 | Jev | Hosted | 0.857 / – | 0.845 / – | 0.211 / – | TypeSafe's API | – |
 
 Each cell is **development / test**. "New sources" means datasets and policy rules Kev never saw during training. It is the closest thing here to your own questions. "Trained sources" means held-out examples from the datasets Kev was trained on. We pick checkpoints using the development sets and read each test set only once per released model. Jev has only been run on the development sets. Brier scores the whole probability distribution, not just the top answer; lower is better.
@@ -271,7 +271,7 @@ The attention mask lets a token read the state and its own question, but not oth
 
 Qwen3.5 and Qwen3.8 mix attention layers with Gated DeltaNet layers, which are recurrent and ignore attention masks. For those models, which is every current Kev, each question runs as its own row: the state followed by that question, with the same positions as above. The rows are independent, so isolation is exact, and the server and `DecisionModel.probs()` compute the state once and reuse its cache for every row. `forward()`, which `kev.benchmark` scores and every published number comes from, keeps the plain rows and runs the state once per question; the two agree to fp32 rounding. On attention-only models the rows and the mask above give identical probabilities (`tests/test_model.py`).
 
-Kev-27B uses the same design on `Qwen/Qwen3.8-27B`, with two differences. Its base is Qwen's post-trained release rather than a `-Base` checkpoint, and we don't know what it was post-trained on. And every backbone weight is trained, not just an adapter, and kept in bf16, so the checkpoint is the whole model: 51 GB of bf16 weights plus the pointer head. It serves in bf16 only (about 66 GB resident with the serving buffers), which is why it needs an 80 GB card and has no Mac path. Its served probabilities stay within 0.022 of the evaluation path on an H200 (`runs/serving-27b-r23`).
+Kev-27B uses the same design on `Qwen/Qwen3.8-27B`, with two differences. Its base is Qwen's post-trained release rather than a `-Base` checkpoint, and we don't know what it was post-trained on. And every backbone weight is trained, not just an adapter, and kept in bf16, so the checkpoint is the whole model: 51 GB of bf16 weights plus the pointer head. It serves in bf16 only (about 66 GB resident with the serving buffers), which is why it needs an 80 GB card. On Apple Silicon the MLX backend loads those weights as they are, with no merge (see [Serving Performance](#serving-performance)); we expect that to fit a 96–128 GB Mac but haven't measured it. Its served probabilities stay within 0.022 of the evaluation path on an H200 (`runs/serving-27b-r23`).
 
 The pointer head scores each option's `</opt>` hidden state against the question's `<decide>` hidden state. A softmax turns those scores into probabilities. Because `<decide>` comes last, it can attend to the full option list.
 
@@ -378,6 +378,8 @@ On Apple Silicon, `uv sync --extra serve` installs [MLX](https://github.com/ml-e
 | Kev-0.8B | 149 ms | 28 ms |
 | Kev-4B | 721 ms | 136 ms |
 
+Adapter checkpoints are folded into the base as they load, which briefly holds a second copy of the weights. Full-weight checkpoints like Kev-27B load as saved, with nothing merged, so loading needs only the weights. We checked this on Kev-4B written out as full bf16 weights: loading peaked at 8.4 GB for 8.4 GB of weights, against 15.9 GB for the adapter path. Its answers matched the adapter path exactly once both hold the same bf16 values, and stayed within 0.015 of the fp32 path on 60 questions (`runs/mlx-full-4b`). Kev-27B's weights are 51 GB. By the same measurements it needs about 51 GB plus working memory, so a 64 GB Mac is borderline and a 96–128 GB Mac should fit. We haven't run it on a Mac that large yet. Kev-27B's first version, an adapter, did run this way on a 128 GB M5 Max, matching the published accuracy (thanks to Sean Connelly, [#175](https://github.com/jaredpalmer/kev/pull/175)).
+
 The server runs in bf16 on GPUs and Macs. Its probabilities differ from the fp32 path the published evaluations use by at most about 0.03 on a GPU and 0.05 on a Mac, and the top answer changes on about one question in 300. Set `KEV_DTYPE=fp32` for the exact path. `/v1/models` reports the backend and precision in use. `uv run modal run modal_app.py::serving --run jaredpalmer/kev-4b --gpu L40S --name <name>` measures a row of the table on your own account (the rows above: `runs/serve-*`, `runs/grouping-4b-h100`, `runs/fused-27b-*`, `runs/serving-27b-r23`).
 
 ## Limitations
@@ -387,7 +389,7 @@ The server runs in bf16 on GPUs and Macs. Its probabilities differ from the fp32
 - Fine-tuning can make the base model worse at individual tasks. Date arithmetic was the clearest case ([issue #8](https://github.com/jaredpalmer/kev/issues/8)); training on stated day counts plus `KEV_DATE_FACTS=1` recovers it.
 - Changing option order can change an answer. Question isolation doesn't prevent this.
 - Kev-0.8B, 4B and 9B trained mostly on at most 384 state tokens and 1,024 tokens for the state plus one question (their document and skill fine-tunes on longer states; up to 7,552 tokens for Kev-9B), Kev-27B on states of up to 32,768 tokens. Serving allows a 65,536-token state; longer context wasn't covered by training.
-- On a Mac, answers take hundreds of milliseconds, not tens. Kev-27B needs an 80 GB GPU and has no Mac path.
+- On a Mac, answers take hundreds of milliseconds, not tens. Kev-27B needs an 80 GB GPU. On a Mac it needs about 51 GB plus working memory; we expect a 96–128 GB Mac to fit it but haven't measured one.
 - Kev-27B starts from a post-trained model whose training data we don't know.
 
 ## Development

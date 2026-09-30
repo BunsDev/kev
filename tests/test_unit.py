@@ -619,7 +619,7 @@ def test_full_weight_checkpoint_round_trip(tiny_base, tmp_path, monkeypatch):
     today's format marked weights="full"; kev.checkpoint loads the backbone from the checkpoint directory itself (bf16 by
     default, fp32 when asked) with exactly the saved values, and the trained weights moved away from the base."""
     from safetensors.torch import load_file
-    from kev.checkpoint import Checkpoint, LoadOptions, read_meta
+    from kev.checkpoint import Checkpoint, LoadOptions, mlx_available, read_meta
     from kev.data import load_records, materialize
     train_tiny(tiny_base, tmp_path / "full", *FULL, "--max_steps", "3", monkeypatch=monkeypatch)
     files = {p.name for p in (tmp_path / "full").iterdir()}
@@ -638,9 +638,9 @@ def test_full_weight_checkpoint_round_trip(tiny_base, tmp_path, monkeypatch):
     assert max(float((a - b).abs().max()) for a, b in zip(model.probs(model.encode(tok, rec)), fp32.probs(fp32.encode(tok, rec)))) < 0.02
     with pytest.raises(ValueError, match="lora_scale"):
         ck.load("cpu", LoadOptions(lora_scale=0.5))
-    with pytest.raises(ValueError, match="backend=torch"):                     # before importing mlx: the refusal, not an ImportError
-        ck.load("cpu", LoadOptions(backend="mlx"))
-    assert ck.backend("mps", LoadOptions(backend="auto")) == "torch"
+    with pytest.raises(ValueError, match="lora_scale"):                        # before importing mlx: the refusal, not an ImportError
+        ck.load("cpu", LoadOptions(backend="mlx", lora_scale=0.5))
+    assert ck.backend("mps", LoadOptions(backend="auto")) == ("mlx" if mlx_available() else "torch")   # full weights run on MLX too (tests/test_mlx.py)
 
 
 def test_full_weight_dtype_must_match_config(tiny_base, tmp_path, monkeypatch):
@@ -889,6 +889,32 @@ def test_merged_lora_checkpoint_initializes_full_weight_training(tiny_base, tmp_
         merge(tmp_path / "lora", tmp_path / "merged", log=lambda m: None)
     with pytest.raises(ValueError, match="full-weight checkpoint already"):
         merge(tmp_path / "sft", tmp_path / "again", log=lambda m: None)
+
+
+def test_merged_lora_checkpoint_in_bf16_rounds_the_fp32_merge_once(tiny_base, tmp_path, monkeypatch):
+    """merge_lora_checkpoint --weights_dtype bf16 on an fp32-trained LoRA (every Kev below 27B): each tensor is the fp32 merge
+    rounded once to bf16, the same bits as casting the fp32 full-weight export; config.json and head.pt say bf16 (the
+    loader's dtype check passes) and head.pt records both dtypes. A bf16-trained LoRA is unchanged by the flag."""
+    import json
+    from safetensors.torch import load_file
+    from kev.checkpoint import Checkpoint, read_meta
+    from scripts.merge_lora_checkpoint import merge
+    train_tiny(tiny_base, tmp_path / "lora", "--lora", "4", "--lr", "5e-2", "--max_steps", "3", monkeypatch=monkeypatch)
+    assert read_meta(tmp_path / "lora").weights_dtype == "fp32"
+    merge(tmp_path / "lora", tmp_path / "fp32", log=lambda m: None)
+    report = merge(tmp_path / "lora", tmp_path / "bf16", log=lambda m: None, weights_dtype="bf16")
+    fp32, bf16 = (load_file(tmp_path / d / "checkpoint/model.safetensors") for d in ("fp32", "bf16"))
+    assert fp32.keys() == bf16.keys() and all(fp32[k].dtype == torch.float32 and torch.equal(bf16[k], fp32[k].to(torch.bfloat16)) for k in fp32)
+    out = tmp_path / "bf16/checkpoint"
+    assert json.loads((out / "config.json").read_text(encoding="utf-8"))["dtype"] == "bfloat16"
+    meta = read_meta(out)
+    assert (meta.weights, meta.weights_dtype) == ("full", "bf16") and report["merged_lora"]["weights_dtype"] == {"trained": "fp32", "written": "bf16"}
+    assert Checkpoint(out).load("cpu")[1].dtype == "bfloat16"
+    train_tiny(tiny_base, tmp_path / "lora16", "--lora", "4", "--weights_dtype", "bf16", "--max_steps", "1", monkeypatch=monkeypatch)
+    plain, flagged = merge(tmp_path / "lora16", tmp_path / "p", log=lambda m: None), merge(tmp_path / "lora16", tmp_path / "f", log=lambda m: None, weights_dtype="bf16")
+    assert plain["weights_sha256"] == flagged["weights_sha256"] and "weights_dtype" not in flagged["merged_lora"]
+    with pytest.raises(ValueError, match="--weights_dtype"):
+        merge(tmp_path / "lora", tmp_path / "fp16", log=lambda m: None, weights_dtype="fp16")
 
 
 def test_master_adamw_is_adamw_on_fp32_masters():

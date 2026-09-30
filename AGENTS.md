@@ -155,7 +155,8 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   base, or `--toward` another checkpoint of the same base and revision, full weights or a LoRA merged in fp32, `--blend_head` to blend the
   pointer heads too; round 23); a LoRA checkpoint as a full-weight one, to start `kev.train --full_ft 1 --init_from` from it
   (`scripts/merge_lora_checkpoint.py`, `modal_app.py::merge_adapter --lora <repo@rev> --out /runs/... [--like <full ckpt>]`: the same
-  fp32 W + delta rounded once as `--toward` at α 0, the LoRA's head and meta with `lora 0`, `weights "full"`; Kev-27B at
+  fp32 W + delta rounded once as `--toward` at α 0, the LoRA's head and meta with `lora 0`, `weights "full"`; `--weights_dtype bf16`
+  writes an fp32-trained Kev as bf16, one rounding after the fp32 merge, which is how the MLX full-weight path is checked on small models; Kev-27B at
   `/runs/r25-init/kev-27b-merged/checkpoint`, weights `f61fb0c5…`, ~6 min on 8 CPUs, `runs/r25-init/kev-27b-merged/merge.json`);
   deltas are `kev.rounds.paired` (2,000 resamples, seed 0, micro). Rounds 5-18 are recorded specs (`"archive": "research-archive-2026-09-24"`): their plans, reads, data builders
   and per-round scripts live on that git tag, not on main; `validate` lists what this checkout lacks instead of failing, and
@@ -266,13 +267,22 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   routes `forward()` (so `kev.benchmark`) through `forward_rows_batch` (one causal row per question, state repeated) and serving and `probs()` through `_branch_rows_from_prefix` (state once, #77); the packed
   block-causal mask is only valid on attention-only bases. Needs transformers>=5.17, peft>=0.21; CUDA wants `flash-linear-attention` + `triton>=3.7.1`
   (in the Modal image). MPS has no fast DeltaNet kernels, so on Apple Silicon `kev.serve` runs these checkpoints through `kev/mlx_model.py` (mlx-lm's Metal kernels; M5, 5 questions on a ~270-token state: Kev-4B 721 ms new state / 136 ms cached state vs 3302 / 847 ms for torch bf16; parity with fp32 torch on the full decision-v7 development partition: 4B max |dp| 0.025, 1 flip in 1,264 questions; 0.8B max 0.054, 4 flips (`runs/r4-mlx-parity-*`)). Plan and results: PLAN.md at tag `research-archive-2026-09-24`, History > "Qwen3.5 port".
+  Full-weight checkpoints (Kev-27B v2) run on MLX too: `kev.mlx_model.load_full` builds mlx-lm's qwen3_5 model from the checkpoint's own
+  `config.json` (model_type `qwen3_5_text`) and shards, `language_model.model.` prefixed onto the saved names, mlx-lm's sanitize for a
+  transformers export (conv kernel axes, norms as 1 + w), LM head deleted before anything is materialized; strict (every name, shape
+  and the head.pt dtype must match, else ValueError), nothing merged or cast. Load peak = the weights: Kev-4B written as bf16 full
+  weights, 8.41 GB MLX peak for 8.41 GB of shards vs 15.87 GB for the LoRA path's merge; the same answers as the LoRA path bit for bit
+  once the base's fp32 A_log / gated-norm tensors are rounded to bf16 as a full export holds them (otherwise max |dp| 0.018); vs fp32
+  torch on the same checkpoint max |dp| 0.015, 0 flips in 60 (`runs/mlx-full-{4b,0.8b}`, `scripts/mlx_full_parity.py`). Kev-27B v2:
+  51.2 GB of weights, so expected ≈ 51 GB plus working memory at load and after; untested on a Mac (PR #175 served v1 through the
+  LoRA path on a 128 GB M5 Max: 52 GB steady, 97 GB peak at the merge).
 - Delta fine-tuning: `kev.train --init_from <run dir | Hub id[@rev]>` warm-starts LoRA + head (compatibility checked before load; source hashes in
   provenance; allowlisted in `kev/experiment.py` so studies can run cheap delta trials from a released checkpoint). Use lr <= 2e-5 for deltas.
   A full-weight checkpoint warm-starts a `--full_ft 1` run (every backbone tensor copied over the base, coverage checked); LoRA and full do not mix.
 - Checkpoint layouts (`kev.checkpoint`, the loader rule): `adapter_config.json` -> LoRA on `head.pt`'s base; no adapter and `config.json` +
   `model*.safetensors` (`save_pretrained` of the bf16 backbone, 5 GB shards + index) -> full weights, loaded from the checkpoint directory
   (`meta.weights == "full"`, `lora == 0`, `base`/`base_revision` kept for the tokenizer). Full weights load in bf16 by default (`KEV_DTYPE=fp32`
-  upcasts); fused kernels and CUDA graphs apply as to a merged adapter; no MLX path.
+  upcasts); fused kernels and CUDA graphs apply as to a merged adapter; on Apple Silicon `backend=auto` runs them on MLX as saved (`kev.mlx_model.load_full`).
 - Publish: `uv run python -m kev.publish --run runs/<run> --repo jaredpalmer/kev-<size> --card docs/model-cards/<name>.md` (needs `hf auth login`;
   `--private`, `--tag`, `--revision <branch>` for candidates; `--private` creates a missing repo private and refuses a public one,
   `kev.mirror.ensure_private`). A full-weight checkpoint on the volume is staged and uploaded from CPU containers, never through
@@ -373,7 +383,7 @@ runs / the endpoint / the volumes. Tests: `tests/test_skill_scripts.py`.
                      `encode_batch` + `batch_loss` (CE, anchor KL, permutation KL, RPS, smoothing/Brier/focal), `main` orchestration. Grad accumulation over small padded batches.
 - `kev/anchors.py`   frozen-base zero-shot distributions per training question, the target for `--anchor_w`
 - `kev/checkpoint.py` Checkpoint (resolve run dir or Hub id, `head.pt` schema = `Meta`, the LoRA-vs-full loader rule `full`/`shards`/`weights_sha256` (a full checkpoint loads in its head.pt `weights_dtype`, which must match config.json's `dtype`), load with `LoadOptions` -> torch `DecisionModel` or, with `backend="mlx"`/`"auto"`, `MLXDecisionModel`; `warm_start` for deltas)
-- `kev/mlx_model.py` Apple Silicon backend: mlx-lm Qwen3.5 backbone, LoRA merged in fp32 on the CPU stream (`merge_lora`), Kev's encoder/rows and the torch PointerHead unchanged; state prefix = mlx-lm prompt cache, branches on a replicated copy
+- `kev/mlx_model.py` Apple Silicon backend: mlx-lm Qwen3.5 backbone, LoRA merged in fp32 on the CPU stream (`merge_lora`) or a full-weight checkpoint loaded as saved (`load_full`), Kev's encoder/rows and the torch PointerHead unchanged; state prefix = mlx-lm prompt cache, branches on a replicated copy
 - `kev/device.py`    default_device / sync / empty_cache / allocated_bytes for cuda, mps, cpu
 - `kev/metrics.py`   pure-numpy scoring of benchmark rows: ECE, Brier, NLL, selective prediction (tie-aware coverage@error, AURC), temperature fit, out-of-fold CV calibration report (`cross_validated_temperature`), paired bootstrap
 - `kev/predictors.py` LocalPredictor (checkpoint), RemotePredictor (System One endpoint), JevPredictor (AI SDK worker)
@@ -410,7 +420,8 @@ runs / the endpoint / the volumes. Tests: `tests/test_skill_scripts.py`.
   `KEV_SHAPE_BUCKET=64` on MPS, state-prefix LRU (`KEV_PREFIX_CACHE=4` states and `KEV_PREFIX_MAX_TOKENS=65536` state tokens in all, a longer state is not cached; `KEV_PREFIX_MIN_TOKENS` defaults to the model's `prefix_min_tokens`: 384 for attention-only torch models, 0 for hybrid and MLX ones because their miss path would recompute the state per question). Checkpoints trained with
   `--weights_dtype bf16` always load bf16 with the adapter unmerged. Any change here must keep the parity
   tests in tests/test_model.py (merged vs unmerged, prefix vs full pass, bucket padding) and tests/test_mlx.py (MLX vs fp32 torch, prefix form vs row form, isolation; Apple Silicon only) passing; report numbers with the fp32 unmerged path.
-  `scripts/mlx_parity.py --run <ckpt>` is the fuller read (60 records, latency of every path); MLX's fp32 GPU matmul is a reduced-precision fast path (~1e-3 relative on an M5), which is why the LoRA merge runs on `mx.cpu`.
+  `scripts/mlx_parity.py --run <ckpt>` is the fuller read (60 records, latency of every path); `scripts/mlx_full_parity.py --full <ckpt>` the
+  full-weight one (MLX full vs its LoRA source vs fp32 torch, each load's memory in its own process); MLX's fp32 GPU matmul is a reduced-precision fast path (~1e-3 relative on an M5), which is why the LoRA merge runs on `mx.cpu`.
 - Serving context is 65,536 tokens for the state and 73,728 for the state plus one question branch, so a question gets at least 8,192 (`kev.model.SERVE_MAX_*`; 8,192 / 8,192 until the long-context PR, `kev.suite.SERVING_CONTEXT_8K`, which the suites frozen before it record and their builders keep); `kev.train --max_state` goes up to the same 65,536 (`MAX_TRAIN_STATE`). The released checkpoints trained on 384 / 1,024, so longer inputs are untested for accuracy. No limit on questions per request: the row form runs `rows_per_pass` rows per forward pass (`ROW_PASS_TOKENS`, a 16,384-token budget counting the cached state per row), and an attention-only model switches from the packed mask to rows above it (`DecisionModel.rows_form`). Evaluation is fp32-exact (as the next item defines it) except long rows: on CUDA with the torch backend, a record whose longest row exceeds `ROW_PASS_TOKENS` runs under SDPA's flash / memory-efficient kernels (the exact math kernel's L x L scores do not fit) and is labelled: `"kernels": "efficient"` on its prediction and rows, `long_rows: {count, records, kernels, threshold}` in report.json (both absent when no row is long, so other reads are unchanged; `LocalPredictor`). This is CUDA-only: on CPU / MPS attention stays eager and exact and still materialises L x L. A long record on a hybrid torch backbone runs its state once through the shared prefix; the MLX backend's `forward` already does. Kev-4B on MLX, 64 questions on a 4.8k-token state: 4.3 s / 9.4 GB peak instead of 18.5 s / 24.7 GB in one pass. `n_perm` on `/permute` is 1..64.
 - What "fp32-exact" guarantees (`runs/drift-v1/REPORT.md`). A read is bit-reproducible for a fixed kernel set: the same kev
   code, image (torch, transformers, flash-linear-attention, Triton, causal-conv1d) and GPU type give bit-identical logits

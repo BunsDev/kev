@@ -120,7 +120,7 @@ Each question is answered as its own row that continues from the shared state, s
 - Text generation, chat, summarisation or open-ended question answering. The model only scores the options it is given.
 - Fully automated decisions with legal, medical, financial, employment or similar consequences for people, without human review.
 - Questions whose answer depends on facts not in the state and not general knowledge (the model cannot look anything up), and knowledge-heavy exams (see Limitations).
-- States longer than 65,536 tokens, languages other than English, and Apple Silicon or other hardware without an 80 GB-class GPU.
+- States longer than 65,536 tokens, languages other than English, and hardware smaller than an 80 GB-class GPU or a Mac with about 96 GB of memory (see Limitations).
 
 ## How to use
 
@@ -131,6 +131,8 @@ git clone https://github.com/jaredpalmer/kev.git && cd kev && uv sync --extra se
 uv run --extra serve python -m kev.serve --run jaredpalmer/kev-27b --port 8008          # v2 (this card)
 uv run --extra serve python -m kev.serve --run jaredpalmer/kev-27b@v1-lora --port 8008  # v1
 ```
+
+On Apple Silicon the same command serves through MLX (chosen automatically), loading the full bf16 weights as saved, with nothing merged. This path is expected to work on a 96–128 GB Mac but has not yet been run at this size (see Limitations).
 
 ```python
 from typesafe_sdk import Choice, Noul, TypeSafeClient
@@ -280,7 +282,7 @@ transfer-r3 test is a short-state panel from the same eight held-out sources as 
 - **Untrained lengths.** States of 32k–64k tokens were evaluated (longdoc-v1) but not trained on.
 - **Retired suite.** A support-ticket suite used to select v1 (scienthoon) was retired as unsound before v2 was built, so v2 has no result on it. v2's unaveraged fine-tuned parent scored 5.5 pp [−7.8, −3.2] below v1 there.
 - **Temperature uncertainty.** The temperature's interval ([1.20, 1.45]) moves test ECE by up to about 0.02.
-- **Hardware.** It needs an 80 GB-class data-centre GPU (more than 80 GB for the longest states) and has no Apple Silicon path.
+- **Hardware.** It needs an 80 GB-class data-centre GPU (more than 80 GB for the longest states). Apple Silicon via MLX: v2's full bf16 weights need about 51 GB plus working memory, so a 64 GB Mac is borderline and a 96–128 GB Mac should fit. This is expected from measurements on smaller models, not yet measured on a large Mac: loading a full-weight Kev-4B through the same path peaked at the size of its weights (8.4 GB), and its answers were within 0.015 of the fp32 evaluation path (`runs/mlx-full-4b`). v1 (the LoRA adapter, tag `v1-lora`) was served through MLX on a 128 GB M5 Max by an external contributor ([PR #175](https://github.com/jaredpalmer/kev/pull/175)): 0.849 accuracy on transfer-v4 development against the published 0.848, 52 GB steady and 97 GB at peak while the adapter was merged.
 
 ## Bias, risks and ethical considerations
 

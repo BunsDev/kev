@@ -11565,5 +11565,53 @@
       "candidate",
       "mmlu_pro"
     ]
+  },
+  {
+    "printed": "8.4",
+    "in": [
+      "README.md",
+      "docs/model-cards/kev-27b.md"
+    ],
+    "source": "runs/mlx-full-4b/report.json",
+    "path": [
+      "loads",
+      "mlx-full",
+      "mlx_peak_load_gb"
+    ]
+  },
+  {
+    "printed": "8.4",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/mlx-full-4b/report.json",
+    "path": [
+      "weights_gb"
+    ]
+  },
+  {
+    "printed": "15.9",
+    "in": [
+      "README.md"
+    ],
+    "source": "runs/mlx-full-4b/report.json",
+    "path": [
+      "loads",
+      "mlx-lora",
+      "mlx_peak_load_gb"
+    ]
+  },
+  {
+    "printed": "0.015",
+    "in": [
+      "README.md",
+      "docs/model-cards/kev-27b.md"
+    ],
+    "source": "runs/mlx-full-4b/report.json",
+    "path": [
+      "parity",
+      "mlx-full vs torch-full",
+      "max_dp"
+    ]
   }
 ]

@@ -65,6 +65,146 @@ def test_backend_resolution():
         Checkpoint("jaredpalmer/kev-4b@qwen3").load("mps", LoadOptions(backend="mlx"))   # Qwen3 base: no DeltaNet layers
 
 
+# --- full-weight checkpoints (kev.train --full_ft; kev.mlx_model.load_full): a 4-layer Qwen3.5 text model with random
+# weights (norms, conv kernels and A_log included, so a missed layout rule shows), saved as a full-weight run saves it
+
+WORDS = "it is charged twice which team billing shipping refund angry the customer".split()
+
+
+def save_full(root, layer_types=("linear_attention", "full_attention", "linear_attention", "full_attention"), dtype=torch.bfloat16, seed=0):
+    """-> a full-weight checkpoint directory: save_pretrained of the text backbone (unprefixed names, config.json of
+    Qwen3_5TextModel), head.pt with weights="full", and a word-level tokenizer as its base."""
+    from tokenizers import Tokenizer, models as tkm, pre_tokenizers
+    from transformers import PreTrainedTokenizerFast, Qwen3_5ForCausalLM, Qwen3_5TextConfig
+    from kev.checkpoint import Meta, write_meta
+    from kev.model import SPECIAL, PointerHead
+    vocab = {t: i for i, t in enumerate(["<unk>", "<pad>", *SPECIAL, *WORDS])}
+    base, ckpt = root / "base", root / "full"
+    tk = Tokenizer(tkm.WordLevel(vocab, unk_token="<unk>")); tk.pre_tokenizer = pre_tokenizers.Whitespace()
+    PreTrainedTokenizerFast(tokenizer_object=tk, unk_token="<unk>", pad_token="<pad>", additional_special_tokens=SPECIAL).save_pretrained(base)
+    config = Qwen3_5TextConfig(vocab_size=len(vocab), hidden_size=64, intermediate_size=128, num_hidden_layers=len(layer_types), num_attention_heads=2,
+                               num_key_value_heads=1, head_dim=32, linear_num_value_heads=2, linear_num_key_heads=1, linear_key_head_dim=32,
+                               linear_value_head_dim=32, layer_types=list(layer_types), full_attention_interval=2, pad_token_id=1)
+    torch.manual_seed(seed)
+    lm = Qwen3_5ForCausalLM(config).model
+    with torch.no_grad():
+        for name, p in lm.named_parameters():   # zero-initialised norms would hide a missing 1 + w; A_log stays negative-definite
+            p.copy_(torch.randn_like(p) * (0.3 if p.ndim == 1 else 0.15) - (1.0 if name.endswith("A_log") else 0.0))
+    lm.to(dtype).save_pretrained(ckpt)
+    head = PointerHead(64, dp=16)
+    with torch.no_grad():
+        for p in head.parameters(): p.mul_(4.0)   # confident enough that a wrong hidden state moves the probabilities
+    write_meta(ckpt, Meta(base=str(base), head=head.state_dict(), head_dim=16, weights="full", weights_dtype={torch.bfloat16: "bf16", torch.float32: "fp32"}[dtype]))
+    return ckpt
+
+
+TINY_REC = {"state": "the customer is charged twice it it it", "questions": {
+    "team": {"type": "choice", "instructions": "which team", "criteria": {"billing": None, "shipping": None, "refund": None}, "label": "billing", "src": "probe"},
+    "angry": {"type": "noul", "instructions": "is the customer angry", "label": True, "src": "probe"}}}
+
+
+def test_full_weight_checkpoint_runs_on_mlx_as_saved(tmp_path):
+    """A full-weight checkpoint loads on MLX from its own config and shards, nothing merged: auto picks MLX for it on
+    Apple Silicon, the backbone runs in the saved bf16, every weight is the saved tensor (the DeltaNet conv kernel in MLX's
+    axis order, zero-centred norms as 1 + w: mlx-lm's rules for a transformers export) and there is no LM head; hidden
+    states and probabilities match the torch loader of the same checkpoint (fp32 on CPU) to bf16 noise, and the prefix
+    form equals the row form."""
+    from safetensors.torch import load_file
+    from kev.data import materialize
+    from mlx.utils import tree_flatten
+    ck = Checkpoint(save_full(tmp_path))
+    assert ck.full and ck.hybrid_base() and ck.backend("mps", LoadOptions(backend="auto")) == "mlx"
+    tok, m = ck.load("mps", LoadOptions(backend="mlx"))
+    _, ref = ck.load("cpu", LoadOptions(dtype=torch.float32))
+    assert isinstance(m, MLXDecisionModel) and m.dtype == "bfloat16" and "lm_head" not in m.lm.language_model
+    saved = load_file(ck.file("model.safetensors"))
+    params = dict(tree_flatten(m.lm.parameters()))
+    assert len(params) == len(saved)
+    as_torch = lambda a: torch.from_numpy(np.asarray(a.astype(mx.float32)))
+    for name, value in saved.items():
+        got = as_torch(params["language_model.model." + name])
+        if name.endswith("conv1d.weight"): value = value.transpose(1, 2)            # [C, 1, K] -> [C, K, 1]
+        if name.endswith(("layernorm.weight", "q_norm.weight", "k_norm.weight")) or name == "norm.weight": value = value + 1   # bf16 + 1 in bf16, as mlx-lm does
+        assert torch.equal(got, value.float()), name
+    import torch.nn.functional as F
+    rec = materialize(TINY_REC)
+    enc = m.encode(tok, rec)
+    # bf16 noise on these random weights: torch's own bf16 pass is 0.027 from fp32 (relative norm), MLX's 0.032
+    assert state_error(m, ref, enc) < 0.05
+    got, target = m.probs(enc), ref.probs(ref.encode(tok, rec))
+    assert max(float((p - t).abs().max()) for p, t in zip(got, target)) < 0.02
+    assert max(float(p.max()) for p in target) > 0.9, "a flat head would pass any comparison"
+    assert max(float((p - F.softmax(z, -1)).abs().max()) for p, z in zip(got, m.forward_rows(enc))) < 0.02
+
+
+def state_error(m, ref, enc):
+    """Relative error (norm) of the MLX model's hidden states over the state tokens against the torch model's."""
+    ids = enc["ids"][: enc["seg"].count(0)]
+    h = torch.from_numpy(np.asarray(m._hidden([ids])[0].astype(mx.float32)))
+    want = ref.lm(input_ids=torch.tensor([ids])).last_hidden_state[0].detach().float()
+    return float((h - want).norm() / want.norm())
+
+
+def test_full_weight_checkpoint_in_fp32_matches_torch_closely(tmp_path):
+    """head.pt's weights_dtype (agreeing with config.json) decides the dtype: an fp32 export runs in fp32, not rounded.
+    With no bf16 rounding anywhere, MLX and torch agree to the Metal fp32 matmul's precision (0.0036 relative on these
+    weights), so any layout mistake (norms without 1 + w, conv kernel axes, A_log, rotary, gating) would stand out."""
+    from kev.data import materialize
+    ck = Checkpoint(save_full(tmp_path, dtype=torch.float32))
+    tok, m = ck.load("mps", LoadOptions(backend="mlx"))
+    _, ref = ck.load("cpu", LoadOptions(dtype=torch.float32))
+    assert m.dtype == "float32"
+    rec = materialize(TINY_REC)
+    enc = m.encode(tok, rec)
+    assert state_error(m, ref, enc) < 0.01
+    assert max(float((p - t).abs().max()) for p, t in zip(m.probs(enc), ref.probs(ref.encode(tok, rec)))) < 0.01
+
+
+def test_full_weight_refusals_on_mlx(tmp_path):
+    """Strict: a checkpoint whose tensors do not match mlx-lm's model name for name and shape, carry another dtype than
+    head.pt names, or disagree with config.json is refused, never loaded partially or cast; so are lora_scale (no adapter),
+    option_isolation and attention-only backbones, as for LoRA checkpoints."""
+    import json, shutil
+    from safetensors.torch import load_file, save_file
+    from kev.checkpoint import read_meta, write_meta
+    good = save_full(tmp_path / "good")
+    mlx = LoadOptions(backend="mlx")
+
+    def variant(name, tensors=None, config=None, meta=None):
+        d = tmp_path / name; shutil.copytree(good, d)
+        if tensors:
+            save_file(tensors(load_file(d / "model.safetensors")), d / "model.safetensors", metadata={"format": "pt"})
+        if config:
+            c = json.loads((d / "config.json").read_text(encoding="utf-8")); config(c); (d / "config.json").write_text(json.dumps(c), encoding="utf-8")
+        if meta:
+            m = read_meta(d); meta(m); write_meta(d, m)
+        return Checkpoint(d)
+
+    def drop(t): t.pop("norm.weight"); return t
+    def extra(t): t["lm_head.weight"] = t["embed_tokens.weight"].clone(); return t
+    def upcast(t): t["layers.0.linear_attn.A_log"] = t["layers.0.linear_attn.A_log"].float(); return t
+    def mlx_layout(t):
+        for k in [k for k in t if k.endswith("conv1d.weight")]: t[k] = t[k].transpose(1, 2).contiguous()
+        return t
+    for name, kw, match in (("missing", {"tensors": drop}, r"1 tensors missing \(e.g. \['norm.weight'\]\)"),
+                            ("unexpected", {"tensors": extra}, r"1 unexpected \(e.g. \['lm_head.weight'\]\)"),
+                            ("dtype", {"tensors": upcast}, r"1 not bfloat16 \(e.g. \['layers.0.linear_attn.A_log'\]\)"),
+                            ("shape", {"config": lambda c: c.update(intermediate_size=96)}, "with another shape"),
+                            ("layout", {"tensors": mlx_layout}, "conv kernels"),
+                            ("model_type", {"config": lambda c: c.update(model_type="qwen3_5_moe_text")}, "Qwen3_5TextModel"),
+                            ("layer_types", {"config": lambda c: c.update(layer_types=["full_attention", "linear_attention"] * 2)}, "layer_types"),   # mlx-lm follows the interval
+                            ("mislabelled", {"meta": lambda m: setattr(m, "weights_dtype", "fp32")}, "config.json records the weights as bfloat16"),
+                            ("isolation", {"meta": lambda m: setattr(m, "option_isolation", True)}, "option_isolation")):
+        with pytest.raises(ValueError, match=match):
+            variant(name, **kw).load("mps", mlx)
+    with pytest.raises(ValueError, match="lora_scale"):
+        Checkpoint(good).load("mps", LoadOptions(backend="mlx", lora_scale=0.5))
+    attn = Checkpoint(save_full(tmp_path / "attn", layer_types=("full_attention",) * 4))
+    assert not attn.hybrid_base() and attn.backend("mps", LoadOptions(backend="auto")) == "torch"
+    with pytest.raises(ValueError, match="attention-only"):
+        attn.load("mps", mlx)
+
+
 @pytest.fixture(scope="module")
 def models():
     from kev.data import materialize
@@ -91,6 +231,29 @@ def test_mlx_matches_fp32_torch_to_bf16_noise(models):
     assert m.backend == "mlx" and m.dtype == "bfloat16" and ref.dtype == "float32" and m.head.temperature == ref.head.temperature
     for rec in recs:
         near(m.probs(m.encode(tok, rec)), ref.probs(ref.encode(tok, rec)), bar=0.03, tie=0.02)
+
+
+def test_full_weight_kev_matches_its_lora_source_bit_for_bit(models, tmp_path):
+    """The pinned Kev-0.8B written as a bf16 full-weight checkpoint (scripts/merge_lora_checkpoint.py --weights_dtype bf16:
+    fp32 merge, one rounding) and loaded on MLX from its own shards gives exactly the probabilities of the LoRA path (base +
+    merge_lora, the same arithmetic) once the base's fp32 tensors (A_log and the gated-norm weight of each DeltaNet layer,
+    which a full-weight export holds in bf16) are rounded the same way; loading it takes no more MLX memory than its weights."""
+    from scripts.merge_lora_checkpoint import merge
+    from scripts.mlx_full_parity import round_fp32_tensors
+    tok, _, _, recs = models
+    merge(RUN, tmp_path / "merged", log=lambda m: None, weights_dtype="bf16")
+    ck = Checkpoint(tmp_path / "merged/checkpoint")
+    assert ck.full and ck.meta.weights_dtype == "bf16" and ck.backend("mps", LoadOptions(backend="auto")) == "mlx"
+    mx.clear_cache(); mx.reset_peak_memory()
+    before = mx.get_active_memory()
+    _, full = ck.load("mps", LoadOptions(backend="mlx"))
+    weights = sum(p.stat().st_size for p in ck.shards())
+    assert mx.get_peak_memory() - before < 1.01 * weights   # no merge copy, no LM head, no transients left behind
+    _, lora = Checkpoint(RUN).load("mps", LoadOptions(backend="mlx"))
+    assert round_fp32_tensors(lora) > 0
+    for rec in recs:
+        got, want = full.probs(full.encode(tok, rec)), lora.probs(lora.encode(tok, rec))
+        assert all(torch.equal(a, b) for a, b in zip(got, want))
 
 
 def near(got, ref, bar, tie):
