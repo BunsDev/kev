@@ -110,7 +110,9 @@ cards. Previous weights are Hub tags (`kev-4b@r8-documents-release`, `kev-4b@nig
 - **scienthoon removed** (2026-09-27): `evals/external/scienthoon-v1` is no longer a Kev eval; past verdicts stand, and from
   round 23 there is no scienthoon read or guard ("scienthoon removed" below). Round 24's audited rule, which round 23 now
   follows, gates no pooled externals: SemIf, WANLI-v2 and TypeSafe are reported.
-- Decisions waiting on Jared: upload the documents-v1 and hard-v1 train partitions to `jaredpalmer/kev-suites` and bump
+- **Kev-27B v2 release candidate** (round 23's `27b-k-w85`, T 1.32) is staged privately in `jaredpalmer/kev-27b-v2-candidate`
+  and waits on Jared's approval; nothing about it is public ("Release candidate: Kev-27B v2").
+- Decisions waiting on Jared: release Kev-27B v2 or not; upload the documents-v1 and hard-v1 train partitions to `jaredpalmer/kev-suites` and bump
   `SUITES_REVISION` (see Next); submit Kev-27B (and the new 4B / 0.8B) to the Decision Index.
 - Spend: Modal metered $4,558.69 at 2026-09-29T13:01Z after round 26's last read (+$104.88 over its launch reading of
   $4,453.81; the 11:17Z reading was $4,650.37, +$196.56, and was revised down by 12:56Z; night ceiling ≈ $5,980, hard stop
@@ -1765,6 +1767,55 @@ checkpoint to pass a registered confirmation. It is not published. If it is rele
 - the test partitions were not untouched for this question;
 - it is still 0.85 round 22's final, and the blend recovered almost none of Kev-27B's short-state or CUAD behaviour
   ("What the blends did").
+
+## Release candidate: Kev-27B v2 (private, awaiting approval)
+
+Round 23's confirmed candidate `27b-k-w85` is staged as a **private** release candidate, **Kev-27B v2**, for Jared's review
+(2026-09-28). Nothing is public: no public repository or revision, no public card, no README, Space or collection change,
+no GitHub release. Kev-27B (`jaredpalmer/kev-27b@01b81998`) stays the released 27B model until Jared decides. The internal
+release id is `kev-27b-r23`, because `kev-27b-v2` already names the released Kev-27B's records (B1 v2:
+`experiments/releases/kev-27b-v2.json`, `runs/release/kev-27b-v2.json`, `/runs/release/kev-27b-v2` on the volume). Record:
+`runs/release/kev-27b-r23-staging.json`.
+
+- **Volume copy.** `modal_app.py::release_copy` (new; `scripts/release_checkpoint.py`, a CPU container, app `kev-release`)
+  copied `/runs/r23-wise/27b-k-w85/checkpoint` to `/runs/release/kev-27b-r23/checkpoint`. It refuses an existing
+  destination. The copy's weights sha256 equals the source's, `d27af6ab…` (the round's `interpolation.json`): 11 shards,
+  17 files, 51.3 GB. The source is untouched; its `head.pt` is still `1a62fa3b…` at T 1.0.
+- **Release temperature.** `scripts/calibrate_checkpoint.py` fitted T on the copy's `head.pt` (pulled, fitted, put back),
+  with the round's registered pool rows: `r3cal` limited to its eight sources, `v9` limited to `mmlu_pro`, and the `transfer4`
+  records excluded, 648 questions. It found no conflict with training. It gives **T 1.3195**, the round's pool fit exactly.
+  Out-of-fold ECE (5 group-disjoint folds) goes from 0.048 to 0.038, and the intervals overlap. The 90 % interval of T is
+  [1.20, 1.45]. The written `head.pt` (`7968f17b…`) is byte-identical to the monitor's copy.
+- **Private Hub candidate.** `modal_app.py::release_publish` (new; `kev.publish --private` in a CPU container, so the weights
+  never reach the laptop) uploaded the copy to `jaredpalmer/kev-27b-v2-candidate`, commit `0dd33bcc`. With `--private`,
+  `kev.publish` now creates a missing repo private and refuses an existing public one (`kev.mirror.ensure_private`). It
+  also links full-weight shards into its staging directory instead of copying 51 GB, and uploads `interpolation.json`.
+  The repo is private. The Hub's LFS hashes give the same weights sha256 (`d27af6ab…`) and `head.pt` (`7968f17b…`).
+  `base_model_relation: finetune`: every weight derives from fine-tunes of the one base. The Hub's `merge` relation is
+  for merges of several listed base models, and Kev-27B is an adapter of the same base.
+- **Verification.** An authenticated load from the Hub (`kev.checkpoint`, H200,
+  `benchmarks --jobs jaredpalmer/kev-27b-v2-candidate@0dd33bcc@evals/external/semif-v1@rel27-hub-semif`) reproduced round 23's
+  semif-v1 read row for row. All 252 rows are served at T 1.3195, and their logits equal the committed raw logits times
+  fp32(1/T) bit for bit, so the backbone and head outputs are identical. Argmax is equal on 252 of 252.
+- **Card and numbers.** `docs/model-cards/kev-27b-v2.md`. Every number traces to a committed report in `docs/claims.json`:
+  `runs/r23-verdict/`, `runs/r23-readout/round23.json`, `runs/r23-breadth-report/`, the serving reports,
+  `runs/release/kev-27b-r23.json` and the staging record. `runs/release/kev-27b-r23.json` comes from
+  `scripts/release_numbers.py --release kev-27b-r23`; release specs may now give an arm a registered `pool` instead of a
+  trial. The four recorded releases reproduce byte for byte from the research checkout's rows.
+- **Long contracts.** The report-only longdoc-v1 test read landed while this was staged, and the card carries it
+  (`runs/r23-verdict/27b-tests.json`, `longtest`). CUAD test: 0.874 against Kev-27B's 0.890, −1.6 [−3.0, −0.3]. ECE is
+  0.053 against 0.007, and 2 to 4 times Kev-27B's in every length bucket. Round 24's unblended SFT was −1.8 with ECE
+  0.055, so the blend recovered almost none of it. The generated bundles are at 1.000.
+- **Caveats the card states.** Round 23 was designed after round 24's confirmation and confirmed on the same test and
+  locked partitions. Short states are not better than Kev-27B's (locked −0.8 [−2.0, +0.5]; transfer-r3 test with
+  `emotion` −2.1 [−3.5, −0.8]). Long contracts are worse and overconfident (above). There is no scienthoon read
+  (removed), and the SFT parent was −5.5 there. hard-v1, devtools-v1 and documents-v1 are in distribution.
+- **To release (Jared's call).**
+  1. Tag Kev-27B's current weights on `jaredpalmer/kev-27b` (e.g. `b1v2-release`).
+  2. Publish `/runs/release/kev-27b-r23/checkpoint` there from a container, with the card moved to `kev-27b.md`.
+  3. Then README, the Space, the collection and kev-deploy's GPU list.
+- **Spend.** Modal metered $3,971.71 before this work and $3,977.37 after the copy, upload and verification
+  (workspace-wide, other apps included). App `kev-release`: CPU copy and upload, plus one H200 read of about 10 minutes.
 
 ## Round 25 (registered)
 

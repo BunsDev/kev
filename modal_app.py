@@ -661,6 +661,55 @@ def mirror_snapshots(study: str = "", paths: str = "", repo: str = "jaredpalmer/
         print(f"{path}: {'commit ' + entry['commit'] if entry else 'NOT uploaded (see the call log)'}", flush=True)
 
 
+RELEASE_CPU, RELEASE_MEMORY, RELEASE_TIMEOUT = 8, (8192, 32768), 4 * 3600   # copy + hash + upload of a ~51 GB checkpoint, no GPU
+
+
+@app.function(image=image, cpu=RELEASE_CPU, memory=RELEASE_MEMORY, retries=0, timeout=RELEASE_TIMEOUT, volumes={RUNS_MOUNT: runs_volume})
+def run_release_copy(src, dst, expect=None):
+    """scripts/release_checkpoint.py: copy a checkpoint on the runs volume to a new release directory (never over one) and
+    check the weights hash of the copy against the source's (and `expect`). CPU only."""
+    sys.path.insert(0, "/root")
+    from scripts.release_checkpoint import copy_checkpoint
+    runs_volume.reload()
+    report = copy_checkpoint(src, dst, expect, log=lambda m: print(m, flush=True))
+    runs_volume.commit()
+    return report
+
+
+@app.local_entrypoint()
+def release_copy(src: str, dst: str, expect: str = ""):
+    """Stage a release checkpoint: --src /runs/<...>/checkpoint --dst /runs/release/<name>/checkpoint (refused if it exists),
+    weights sha256 of the copy checked against the source's and --expect. The source is only read."""
+    for p in (src, dst):
+        if not p.startswith(f"{RUNS_MOUNT}/") or not p.endswith("/checkpoint"): raise SystemExit(f"{p} is not a /runs/.../checkpoint directory")
+    print(json.dumps(run_release_copy.remote(src, dst, expect or None), indent=1), flush=True)
+
+
+@app.function(image=image, cpu=RELEASE_CPU, memory=RELEASE_MEMORY, retries=0, timeout=RELEASE_TIMEOUT, volumes={RUNS_MOUNT: runs_volume},
+              secrets=[modal.Secret.from_name(MIRROR_SECRET)])
+def run_release_publish(run, repo, card, message):
+    """kev.publish --private of a release checkpoint on the runs volume (`card`: the model card's text). The repo must be
+    private: kev.publish creates a missing one private and refuses one that is not. CPU only; HF_TOKEN from MIRROR_SECRET."""
+    import subprocess as sp
+    import tempfile
+    runs_volume.reload()
+    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f: f.write(card)
+    out = sp.run([sys.executable, "-m", "kev.publish", "--run", run, "--repo", repo, "--card", f.name, "--private", "--message", message],
+                 cwd="/root", env={**os.environ, "PYTHONPATH": "/root"}, check=True, capture_output=True, text=True)
+    print(out.stdout[-4000:], out.stderr[-4000:], flush=True)
+    from huggingface_hub import HfApi
+    info = HfApi().repo_info(repo, repo_type="model", files_metadata=False)
+    return {"repo": repo, "private": info.private, "commit": info.sha, "files": sorted(s.rfilename for s in info.siblings)}
+
+
+@app.local_entrypoint()
+def release_publish(run: str, repo: str, card: str, message: str):
+    """Upload a staged release checkpoint (--run /runs/release/<name>/checkpoint) to a PRIVATE Hub repo with --card as its
+    README, from a CPU container (the weights never leave Modal and Hugging Face)."""
+    if not run.startswith(f"{RUNS_MOUNT}/release/"): raise SystemExit(f"--run is a staged release checkpoint under {RUNS_MOUNT}/release/, not {run}")
+    print(json.dumps(run_release_publish.remote(run, repo, Path(card).read_text(encoding="utf-8"), message), indent=1), flush=True)
+
+
 @app.local_entrypoint()
 def smoke_base(base: str, revision: str, gpu: str = "H200"):
     """Memory and step-time check for a base that has not been trained yet (LoRA footprint, which modules it hits, peak GB)."""

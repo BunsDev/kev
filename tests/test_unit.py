@@ -1820,6 +1820,63 @@ def test_mirror_uploads_complete_checkpoints_to_a_private_repo_only(tmp_path):
     assert mirror(half, "me/kev-snapshots", api=hub, root=root, log=logs.append) is None and "not a complete checkpoint" in logs[-1]
 
 
+def _fake_full_checkpoint(path, shards=2):
+    from kev.checkpoint import Meta, write_meta
+    from kev.suite import write_json
+    path.mkdir(parents=True)
+    write_json(path / "config.json", {}); write_json(path / "tokenizer.json", {})
+    for i in range(shards): (path / f"model-{i + 1:05d}-of-{shards:05d}.safetensors").write_bytes(bytes([i]) * 1000)
+    write_meta(path, Meta(base="Qwen/Qwen3.8-27B", weights="full", weights_dtype="bf16"))
+    write_json(path.parent / "interpolation.json", {"alpha": 0.85})
+    return path
+
+
+def test_release_copy_checks_the_weights_hash_and_never_overwrites(tmp_path):
+    """scripts/release_checkpoint.py: the copy's weights hash (computed in parallel) equals Checkpoint.weights_sha256 of the
+    source, the record files beside the checkpoint come along, an existing release directory is refused, and a wrong
+    --expect is refused before anything is written."""
+    from kev.checkpoint import Checkpoint
+    from scripts.release_checkpoint import copy_checkpoint, weights_sha256
+    src = _fake_full_checkpoint(tmp_path / "r23-wise/k-w85/checkpoint")
+    want = Checkpoint(str(src)).weights_sha256()
+    assert weights_sha256(src) == want
+    report = copy_checkpoint(src, tmp_path / "release/x/checkpoint", expect=want, log=lambda m: None)
+    assert report["weights_sha256"] == want == Checkpoint(str(tmp_path / "release/x/checkpoint")).weights_sha256()
+    assert report["sidecars"] == ["interpolation.json"] and report["head_sha256"]["src"] == report["head_sha256"]["dst"]
+    with pytest.raises(FileExistsError): copy_checkpoint(src, tmp_path / "release/x/checkpoint", log=lambda m: None)
+    with pytest.raises(ValueError, match="not the expected"): copy_checkpoint(src, tmp_path / "release/y/checkpoint", expect="0" * 64, log=lambda m: None)
+    assert not (tmp_path / "release/y").exists()
+
+
+def test_publish_private_refuses_a_public_repo_and_links_shards(tmp_path, monkeypatch):
+    """kev.publish --private creates a missing repo private and refuses an existing public one before uploading; a
+    full-weight checkpoint's shards are linked into the staging directory (not copied) and the trial's interpolation.json
+    is uploaded with it."""
+    import sys
+    from kev import publish
+    run = _fake_full_checkpoint(tmp_path / "release/x/checkpoint")
+    card = tmp_path / "card.md"; card.write_text("---\nbase_model: x\nbase_model_relation: finetune\n---\nCard\n", encoding="utf-8")
+    staged = {}
+
+    def upload_folder(**kw):
+        folder = Path(kw["folder_path"])
+        staged.update({p.name: p.is_symlink() for p in folder.iterdir()})
+        return SimpleNamespace(oid="c1")
+
+    for hub, ok in ((_FakeHub(private=False), False), (_FakeHub(exists=False), True)):
+        hub.upload_folder = upload_folder
+        monkeypatch.setattr(publish, "HfApi", lambda: hub)
+        monkeypatch.setattr(sys, "argv", ["kev.publish", "--run", str(run), "--repo", "me/cand", "--card", str(card), "--private", "--message", "m"])
+        if not ok:
+            with pytest.raises(PermissionError): publish.main()
+            assert staged == {}
+            continue
+        publish.main()
+        assert hub.created == [("me/cand", True)]
+    shards = {n for n in staged if n.startswith("model-")}
+    assert len(shards) == 2 and all(staged[n] for n in shards) and not staged["head.pt"] and "interpolation.json" in staged and "README.md" in staged
+
+
 def test_committed_snapshots_and_the_final_checkpoint_are_mirrored(tmp_path, monkeypatch, capsys):
     """With snapshot_hub_repo set, the volume watcher spawns one run_mirror per new complete snapshot and for the final
     checkpoint, only after the commit that includes it (a failed commit defers it), never for an incomplete snapshot or an

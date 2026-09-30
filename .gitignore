@@ -506,3 +506,9 @@ runs/r26-27b-lr1e6/00-trial-0/checkpoint/*
 !runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/
 runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/*
 !runs/r26-27b-lr1e6/00-trial-0/snapshots/*/checkpoint/snapshot.json
+# release candidate Kev-27B v2 (internal id kev-27b-r23; PLAN.md "Release candidate: Kev-27B v2"): the release numbers,
+# the staging record (volume copy, hashes, temperature fit, private Hub upload and its verification) and the verification
+# read of the private Hub checkpoint (runs/rel27-hub-semif: report + rows)
+!runs/release/kev-27b-r23.json
+!runs/release/kev-27b-r23-staging.json
+!runs/rel27-hub-semif/rows.json

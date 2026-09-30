@@ -8,12 +8,15 @@ The exact base checkpoint is recorded in the model card's `base_model` field and
 
 Uploads: the adapter (or, for a full-weight run, config.json and every model*.safetensors shard with its index), head.pt,
 tokenizer files, eval.json, training log (if found), and the model card (--card) as README.md with the repo id and run
-name filled in. Requires `hf auth login`.
+name filled in. Requires `hf auth login`. With --private the repo is created private if missing and an existing repo
+that is not private is refused (kev.mirror.ensure_private), so a candidate never lands in a public repo. Full-weight
+shards are linked into the staging directory, not copied (modal_app.py::release_publish uploads a 27B from a CPU container).
 """
 import argparse, os, re, shutil, tempfile
 from pathlib import Path
 from huggingface_hub import HfApi
 from .checkpoint import Checkpoint
+from .mirror import ensure_private
 from .suite import read_json, write_json
 
 FILES = ["head.pt", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja",
@@ -35,13 +38,16 @@ def main():
     checkpoint, run_name = Checkpoint(a.run), os.path.basename(a.run.rstrip("/"))
     base, full = checkpoint.meta.base, checkpoint.full
     api = HfApi()
-    api.create_repo(a.repo, repo_type="model", exist_ok=True, private=a.private)
+    if a.private: ensure_private(api, a.repo)   # creates a missing repo private; refuses one that exists public
+    else: api.create_repo(a.repo, repo_type="model", exist_ok=True, private=False)
 
     with tempfile.TemporaryDirectory() as tmp:
-        for f in FILES + WEIGHTS[full] + [p.name for p in checkpoint.shards() if full]:
+        shards = {p.name for p in checkpoint.shards()} if full else set()
+        for f in FILES + WEIGHTS[full] + sorted(shards):
             src = f"{a.run}/{f}"
-            if os.path.exists(src): shutil.copy(src, tmp)
-            else: print(f"skip {f} (not found)")
+            if not os.path.exists(src): print(f"skip {f} (not found)")
+            elif f in shards: os.symlink(os.path.abspath(src), f"{tmp}/{f}")   # read-only and ~5 GB each: linked, not copied (upload_folder follows links)
+            else: shutil.copy(src, tmp)
         if not full:   # runs before task_type was set saved null; the Hub warns about it and PEFT treats both the same for a bare backbone
             cfg_path = f"{tmp}/adapter_config.json"; cfg = read_json(cfg_path)
             if not cfg.get("task_type"): cfg["task_type"] = "FEATURE_EXTRACTION"; write_json(cfg_path, cfg)
@@ -51,7 +57,7 @@ def main():
         trial = os.path.dirname(a.run.rstrip("/")) if run_name == "checkpoint" else None
         if trial:
             run_name = os.path.relpath(trial, "runs")
-            for f in ("result.json", "provenance.json", "train.log", "training_config.json", "training_metrics.json"):
+            for f in ("result.json", "provenance.json", "train.log", "training_config.json", "training_metrics.json", "interpolation.json"):
                 for src in (f"{trial}/{f}", f"{a.run}/{f}"):
                     if os.path.exists(src): shutil.copy(src, f"{tmp}/{f}"); break
 

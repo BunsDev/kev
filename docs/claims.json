@@ -9693,5 +9693,2919 @@
     "path": [
       "resident_gb"
     ]
+  },
+  {
+    "printed": "0.832",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.820",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "1.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "2.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.795",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.743",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "5.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "3.7",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "6.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.889",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.800",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "8.9",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "7.5",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "10.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.918",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "hardtest",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.749",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "hardtest",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "16.9",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "hardtest",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "14.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "hardtest",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "19.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "hardtest",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.825",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "devtest",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.789",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "devtest",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "3.6",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "devtest",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "1.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "devtest",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "5.9",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "devtest",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.908",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs1test",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.869",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs1test",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "4.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs1test",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "2.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs1test",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "5.9",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs1test",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.921",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs2",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.881",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs2",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "4.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs2",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "2.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs2",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "6.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs2",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.757",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest_index",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.748",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest_index",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest_index",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest_index",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "1.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest_index",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "2,489",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "n"
+    ]
+  },
+  {
+    "printed": "2,024",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "n"
+    ]
+  },
+  {
+    "printed": "2,795",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "pooled",
+      "n"
+    ]
+  },
+  {
+    "printed": "1,088",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "hardtest",
+      "n"
+    ]
+  },
+  {
+    "printed": "771",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "devtest",
+      "n"
+    ]
+  },
+  {
+    "printed": "936",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs1test",
+      "n"
+    ]
+  },
+  {
+    "printed": "953",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "docs2",
+      "n"
+    ]
+  },
+  {
+    "printed": "3,089",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest_index",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.015",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.013",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.049",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.051",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.8887",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.8963",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.154",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "brier",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.160",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "brier",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "delta"
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "2.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.5",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "583",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "candidate"
+    ],
+    "scale": 656
+  },
+  {
+    "printed": "588",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "panels",
+      "locked",
+      "acc",
+      "parent"
+    ],
+    "scale": 656
+  },
+  {
+    "printed": "1.20",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "temperature_ci",
+      "lower"
+    ]
+  },
+  {
+    "printed": "1.45",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "temperature_ci",
+      "upper"
+    ]
+  },
+  {
+    "printed": "648",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-locked.json",
+    "path": [
+      "temperature_fit",
+      "questions"
+    ]
+  },
+  {
+    "printed": "0.026",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests-t-interval.json",
+    "path": [
+      "panels",
+      "breadthtest",
+      "1.203",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.067",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests-t-interval.json",
+    "path": [
+      "panels",
+      "tshtest",
+      "1.447",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.014",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests-t-interval.json",
+    "path": [
+      "panels",
+      "pooled",
+      "1.320",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.027",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests-t-interval.json",
+    "path": [
+      "panels",
+      "pooled",
+      "parent@1.382",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.9",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "short",
+      "acc",
+      "delta"
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "2.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "short",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "short",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "1.95",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "short",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "long",
+      "acc",
+      "delta"
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "long",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "1.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "long",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": 100
+  },
+  {
+    "printed": "0.097",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "long",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.063",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "long",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.956",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "ood",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.944",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "ood",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.020",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "ood",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.044",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "ood",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "4,988",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "ood",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.988",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "agents_ood",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.967",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "agents_ood",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.032",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "agents_ood",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.137",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "agents_ood",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "2,084",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "agents_ood",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.984",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "guardrails_ood",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.944",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "guardrails_ood",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.010",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "guardrails_ood",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.079",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "guardrails_ood",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "4,949",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-readout/round23.json",
+    "path": [
+      "arms",
+      "27b-k-w85",
+      "panels",
+      "guardrails_ood",
+      "n"
+    ]
+  },
+  {
+    "printed": "52.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "systems",
+      "27b-k-w85",
+      "overall",
+      "index"
+    ]
+  },
+  {
+    "printed": "49.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "27b-k-w85",
+      0
+    ]
+  },
+  {
+    "printed": "55.4",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "27b-k-w85",
+      1
+    ]
+  },
+  {
+    "printed": "50.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "systems",
+      "Kev-27B",
+      "overall",
+      "index"
+    ]
+  },
+  {
+    "printed": "47.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "Kev-27B",
+      0
+    ]
+  },
+  {
+    "printed": "53.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "Kev-27B",
+      1
+    ]
+  },
+  {
+    "printed": "54.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "systems",
+      "Jev",
+      "overall",
+      "index"
+    ]
+  },
+  {
+    "printed": "51.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "Jev",
+      0
+    ]
+  },
+  {
+    "printed": "57.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "Jev",
+      1
+    ]
+  },
+  {
+    "printed": "50.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "systems",
+      "AutoJev",
+      "overall",
+      "index"
+    ]
+  },
+  {
+    "printed": "47.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "AutoJev",
+      0
+    ]
+  },
+  {
+    "printed": "53.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "index",
+      "AutoJev",
+      1
+    ]
+  },
+  {
+    "printed": "0.4",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "difference",
+      "27b-k-w85",
+      0
+    ],
+    "scale": -1
+  },
+  {
+    "printed": "4.6",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "uncertainty",
+      "difference",
+      "27b-k-w85",
+      1
+    ]
+  },
+  {
+    "printed": "53.7",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-breadth-report/report.json",
+    "path": [
+      "systems",
+      "27b-r22-final",
+      "overall",
+      "index"
+    ]
+  },
+  {
+    "printed": "0.889",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.154",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.875",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "locked_transfer",
+      "coverage_at_5pct_error"
+    ]
+  },
+  {
+    "printed": "0.896",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.160",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.835",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "locked_transfer",
+      "coverage_at_5pct_error"
+    ]
+  },
+  {
+    "printed": "0.851",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "transfer_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.218",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "transfer_dev",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.848",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "transfer_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.229",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "transfer_dev",
+      "brier"
+    ]
+  },
+  {
+    "printed": "0.858",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "r3test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.879",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "r3test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.757",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "breadth_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.745",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "breadth_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.912",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "hard_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.733",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "hard_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.918",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "hard_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.749",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "hard_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.756",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "devtools_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.702",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "devtools_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.790",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "devtools_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.711",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "devtools_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.916",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "docs1_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.862",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "docs1_dev",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.908",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "docs1_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.869",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "docs1_test",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.965",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "semif",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.972",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "semif",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.756",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "wanli2",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.745",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "wanli2",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.854",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "typesafe",
+      "acc"
+    ]
+  },
+  {
+    "printed": "0.865",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "typesafe",
+      "acc"
+    ]
+  },
+  {
+    "printed": "2.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "paired_acc_delta",
+      "r3test",
+      "delta"
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "3.5",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "paired_acc_delta",
+      "r3test",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "paired_acc_delta",
+      "r3test",
+      "ci95",
+      1
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.675",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "mmlu_pro"
+    ]
+  },
+  {
+    "printed": "0.665",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "mmlu_pro"
+    ]
+  },
+  {
+    "printed": "0.00",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "unknowable_share_at_0_9"
+    ]
+  },
+  {
+    "printed": "0.00",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "unknowable_share_at_0_9"
+    ]
+  },
+  {
+    "printed": "1.32",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "candidate",
+      "temperature"
+    ]
+  },
+  {
+    "printed": "1.38",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23.json",
+    "path": [
+      "parent",
+      "temperature"
+    ]
+  },
+  {
+    "printed": "0.840",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/jev-transfer-v9/report.json",
+    "path": [
+      "tasks",
+      "mmlu_pro",
+      "acc"
+    ]
+  },
+  {
+    "printed": "1.3195",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23-staging.json",
+    "path": [
+      "temperature",
+      "value"
+    ]
+  },
+  {
+    "printed": "0.048",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23-staging.json",
+    "path": [
+      "temperature",
+      "fit",
+      "cross_validation",
+      "raw",
+      "ece"
+    ]
+  },
+  {
+    "printed": "0.038",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23-staging.json",
+    "path": [
+      "temperature",
+      "fit",
+      "cross_validation",
+      "out_of_fold",
+      "ece"
+    ]
+  },
+  {
+    "printed": "448",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23-staging.json",
+    "path": [
+      "temperature",
+      "fit",
+      "fit_rows",
+      0,
+      "questions"
+    ]
+  },
+  {
+    "printed": "200",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23-staging.json",
+    "path": [
+      "temperature",
+      "fit",
+      "fit_rows",
+      1,
+      "questions"
+    ]
+  },
+  {
+    "printed": "252",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/release/kev-27b-r23-staging.json",
+    "path": [
+      "verification",
+      "logits_exact"
+    ]
+  },
+  {
+    "printed": "0.0223",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23/report.json",
+    "path": [
+      "graphs_hit_vs_fp32",
+      "max_dp"
+    ]
+  },
+  {
+    "printed": "0.0039",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23/report.json",
+    "path": [
+      "isolation_served",
+      "packed",
+      "max_dp"
+    ]
+  },
+  {
+    "printed": "65.5",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23/report.json",
+    "path": [
+      "resident_gb"
+    ]
+  },
+  {
+    "printed": "17.6",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23/report.json",
+    "path": [
+      "load_seconds"
+    ]
+  },
+  {
+    "printed": "21.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23/report.json",
+    "path": [
+      "throughput",
+      "decision-v7 development @ 1 clients",
+      "requests_per_s"
+    ]
+  },
+  {
+    "printed": "36.4",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23/report.json",
+    "path": [
+      "throughput",
+      "decision-v7 development @ 64 clients",
+      "requests_per_s"
+    ]
+  },
+  {
+    "printed": "0.0064",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23-long/report.json",
+    "path": [
+      "lengths",
+      "8192",
+      "served",
+      "served_vs_benchmark",
+      "max_dp"
+    ]
+  },
+  {
+    "printed": "0.0095",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23-long/report.json",
+    "path": [
+      "lengths",
+      "32768",
+      "served",
+      "served_vs_benchmark",
+      "max_dp"
+    ]
+  },
+  {
+    "printed": "0.0017",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23-long/report.json",
+    "path": [
+      "lengths",
+      "65536",
+      "served",
+      "served_vs_benchmark",
+      "max_dp"
+    ]
+  },
+  {
+    "printed": "9.4",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23-long/report.json",
+    "path": [
+      "lengths",
+      "65536",
+      "served",
+      "new_ms"
+    ],
+    "scale": 0.001
+  },
+  {
+    "printed": "733",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23-long/report.json",
+    "path": [
+      "lengths",
+      "65536",
+      "served",
+      "cached_ms"
+    ]
+  },
+  {
+    "printed": "87.1",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/serving-27b-r23-long/report.json",
+    "path": [
+      "lengths",
+      "65536",
+      "served",
+      "peak_allocated_gb"
+    ]
+  },
+  {
+    "printed": "145,840",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "records"
+    ]
+  },
+  {
+    "printed": "337,130",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "questions"
+    ]
+  },
+  {
+    "printed": "78,786",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "sft-v1",
+      "records"
+    ]
+  },
+  {
+    "printed": "24,000",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "tasksource-v1",
+      "records"
+    ]
+  },
+  {
+    "printed": "3,200",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "longify",
+      "records"
+    ]
+  },
+  {
+    "printed": "7,617",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "longdoc",
+      "records"
+    ]
+  },
+  {
+    "printed": "7,312",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "ood",
+      "records"
+    ]
+  },
+  {
+    "printed": "7,544",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "tone",
+      "records"
+    ]
+  },
+  {
+    "printed": "2,699",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "injection",
+      "records"
+    ]
+  },
+  {
+    "printed": "4,875",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "agents",
+      "records"
+    ]
+  },
+  {
+    "printed": "4,152",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "guardrails-pii",
+      "records"
+    ]
+  },
+  {
+    "printed": "5,655",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "files",
+      "train.jsonl",
+      "by_component",
+      "guardrails-grounding",
+      "records"
+    ]
+  },
+  {
+    "printed": "119",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "evals/sft-v2-r22/manifest.json",
+    "path": [
+      "downsampled_components",
+      "tasksource-v1",
+      "families"
+    ]
+  },
+  {
+    "printed": "5.5",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r22-readout/round22.json",
+    "path": [
+      "arms",
+      "27b-lr2e6",
+      "panels",
+      "scienthoon",
+      "acc",
+      "delta"
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "7.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r22-readout/round22.json",
+    "path": [
+      "arms",
+      "27b-lr2e6",
+      "panels",
+      "scienthoon",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "3.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r22-readout/round22.json",
+    "path": [
+      "arms",
+      "27b-lr2e6",
+      "panels",
+      "scienthoon",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "1.8",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r24-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "delta"
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.055",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r24-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.007",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r24-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "2,194",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.874",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.890",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "1.6",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "delta"
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "3.0",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.3",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.053",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.007",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece",
+      "parent"
+    ]
+  },
+  {
+    "printed": "867",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_under_8k",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.874",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_under_8k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.900",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_under_8k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.059",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_under_8k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.025",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_under_8k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "443",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_8k_16k",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.880",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_8k_16k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.892",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_8k_16k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.052",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_8k_16k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.028",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_8k_16k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "442",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_16k_32k",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.873",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_16k_32k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.882",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_16k_32k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.061",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_16k_32k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.019",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_16k_32k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "442",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_32k_64k",
+      "n"
+    ]
+  },
+  {
+    "printed": "0.867",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_32k_64k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.876",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc_32k_64k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "0.060",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_32k_64k",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "0.014",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "ece_32k_64k",
+      "parent"
+    ]
+  },
+  {
+    "printed": "2,400",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest_generated",
+      "n"
+    ]
+  },
+  {
+    "printed": "1.000",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest_generated",
+      "acc",
+      "candidate"
+    ]
+  },
+  {
+    "printed": "1.000",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r23-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest_generated",
+      "acc",
+      "parent"
+    ]
+  },
+  {
+    "printed": "3.2",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r24-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "ci95",
+      0
+    ],
+    "scale": -100
+  },
+  {
+    "printed": "0.5",
+    "in": [
+      "docs/model-cards/kev-27b-v2.md"
+    ],
+    "source": "runs/r24-verdict/27b-tests.json",
+    "path": [
+      "panels",
+      "longtest",
+      "acc",
+      "ci95",
+      1
+    ],
+    "scale": -100
   }
 ]

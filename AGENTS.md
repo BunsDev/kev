@@ -169,7 +169,8 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   session <specs> --spend-start X --spend-cap Y` runs registered rounds to their read-outs under a spend cap and never confirms;
   it also keeps `leaderboard`, `release-check`, `compare`. An unattended session follows `docs/autoresearch.md` (start, spend rule,
   registration, run, what may not be touched, resilience, reporting, gotchas). Model-card numbers: `scripts/release_numbers.py --release <name>`
-  reads `experiments/releases/<name>.json`.
+  reads `experiments/releases/<name>.json` (each arm a `trial`, served at its development-rows T, or a checkpoint with the round's
+  registered temperature `pool`, as `kev-27b-r23`).
 - Frozen suites: `evals/<version>/<suite>/{manifest.json, *.jsonl}` with partitions `train/calibration/development/test`.
   Manifests pin dataset + base revisions and the sha256 of every partition. Current: `evals/v7/decision-v7` (the release
   recipe), `evals/v8/decision-v8`, `evals/v4/transfer-v4` and `evals/v9/transfer-v9` (MMLU-Pro, buried states,
@@ -232,7 +233,7 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   access (`hf auth login` / `HF_TOKEN`; Modal images already carry a locally fetched copy under `evals/`) and raises a
   PermissionError naming the repo for everyone else; `tests/test_conventions.py` fails if such a suite tracks a partition.
 - Modal (default for anything beyond smoke): `modal_app.py`; `uv run modal run modal_app.py::{smoke,study,pull,resume,
-  locked_test,evaluate,base_probe,benchmarks,smoke_base,anchors,sft_probe,gpu_tests,interpolate}`; `uv run modal deploy modal_app.py` once so studies
+  locked_test,evaluate,base_probe,benchmarks,smoke_base,anchors,sft_probe,gpu_tests,interpolate,release_copy,release_publish}`; `uv run modal deploy modal_app.py` once so studies
   survive a disconnect. Image = `uv_sync` of pyproject/uv.lock (Linux torch wheel is CUDA) + fla, triton>=3.7.1 and the
   causal-conv1d wheel (`--no-deps`, or it reinstalls torch's triton 3.4) + `kev/` + `evals/` + `tests/`; Volumes
   `kev-hf-cache` (HF_HOME) and `kev-runs` (trial outputs, pulled to `runs/<study>` then ranked by
@@ -267,7 +268,13 @@ Title Case sections, API tables, Authors + License); model cards are formal.
   (`meta.weights == "full"`, `lora == 0`, `base`/`base_revision` kept for the tokenizer). Full weights load in bf16 by default (`KEV_DTYPE=fp32`
   upcasts); fused kernels and CUDA graphs apply as to a merged adapter; no MLX path.
 - Publish: `uv run python -m kev.publish --run runs/<run> --repo jaredpalmer/kev-<size> --card docs/model-cards/<name>.md` (needs `hf auth login`;
-  `--private`, `--tag`, `--revision <branch>` for candidates). Repos are named by
+  `--private`, `--tag`, `--revision <branch>` for candidates; `--private` creates a missing repo private and refuses a public one,
+  `kev.mirror.ensure_private`). A full-weight checkpoint on the volume is staged and uploaded from CPU containers, never through
+  the laptop: `modal_app.py::release_copy --src /runs/.../checkpoint --dst /runs/release/<name>/checkpoint --expect <weights sha256>`
+  (`scripts/release_checkpoint.py`: refuses an existing destination, checks the copy's weights hash), then the release temperature
+  into the copy's head.pt (`scripts/calibrate_checkpoint.py`), then `modal_app.py::release_publish --run /runs/release/<name>/checkpoint
+  --repo <private repo> --card <card>` (kev.publish --private; shards linked, not copied). Kev-27B v2 (PLAN.md "Release candidate:
+  Kev-27B v2") is the worked example. Repos are named by
   base model size (Kev-0.5B = Qwen2.5-0.5B); versions within a size are Hub tags (`hf repos tag create jaredpalmer/kev-0.5b vX.Y`).
   Collection: huggingface.co/collections/jaredpalmer/kev-6aad9d0ea49f2589665e07cd. `--run` in serve/benchmark accepts a Hub id.
 - HF Space (public demo, ZeroGPU): huggingface.co/spaces/jaredpalmer/kev. Source in `space/` (Gradio 6 `app.py`, `presets.py` mirrors the
