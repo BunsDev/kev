@@ -2555,6 +2555,72 @@ Checkpoints (~51 GB each: 3 snapshots + the final) stay on the `kev-runs` volume
 - **Short-state drift tracks the replay share.** Transfer-r3 test fell against round 25 when replay went from 30.2 % to
   23.5 %. Any further continued-SFT round from Kev-27B should hold the replay share, not the replay count.
 
+## Round 27 (registered)
+
+**Question.** Is round 18's 9B documents-and-skills delta a Kev-9B candidate under the audited rule? Round 18 (2026-09-24)
+selected no 9B candidate: arm (a) passed both primaries (skills +19.0, documents +7.0) and failed only WANLI-v2, scienthoon
+and the pooled externals, all since removed or ungated (scienthoon removed, the audit, "WANLI and TypeSafe removed").
+Round 18's verdict stands; this is a new, registered selection over its two finished trials, with no training.
+
+**Arms** (checkpoints on the volume; their development reads from round 18, unchanged): `9b-r18a` =
+`runs/r18-9b/00-trial-0` (lr 2e-5), `9b-r18b` = `runs/r18-9b/01-trial-1` (lr 1e-5); parent the released Kev-9B
+(`jaredpalmer/kev-9b@2629c06a`, `night2-9b-du/00-trial-0`, its round-18 reads).
+
+**Rule** (round 18's, with the 2026-09-27 audit's verdicts applied as in round 24): primaries hard-v1 + devtools-v1
+development pooled accuracy lower > 0 and documents-v1 development lower > 0; guards: short state (transfer-v4 dev +
+transfer-r3 test, without `emotion`) accuracy lower ≥ −2 pp, Brier upper ≤ +0.02, confident errors upper ≤ +1 pp;
+unknowable share ≤ 0.05 (transfer-v9); hard-v1 ECE ≤ the parent's + 0.01. devtools-v1 drops `flakeflagger` and the
+`commitpackft_type` task in every panel (the audit's Kev-panel exclusions). No WANLI, TypeSafe, scienthoon or pooled
+external read; SemIf is reported (optional). Candidate: the passing arm with the larger sum of the two primary estimates.
+
+**Temperature.** Every arm is served at one temperature fitted on round 24's held-out pool (transfer-r3 calibration's
+eight sources + transfer-v9's `mmlu_pro`, 90 % bootstrap interval; standing rule: never an in-distribution partition),
+not the in-distribution T each trial's head carries. `trained_on` lists decision-v7, documents-v1 and round10/skills
+(round15/joint is their concatenation); it leaves out `evals/night2` (the released Kev-9B's delta), whose manifest lists
+no sources, so the engine cannot check it: its records are four synthetic families (`night2_dates`, `night2_assertion`,
+`night2_unknowable`, `night2_unknowable_control`), none in the pool. The parent keeps its shipped T 2.30.
+
+**Confirmation** (round 18's, with the same exclusions): hard-v1 + devtools-v1 test pooled lower > 0 and documents-v1 test
+lower > 0 (documents-v2 reported); locked transfer-v4 accuracy ≥ parent − 1 pp and served Brier ≤ parent + 0.005.
+
+**Not blind.** The development reads were made on 2026-09-24 and their headline numbers are in "Round 18 result"; the
+WANLI analysis that removed WANLI-v2 compared arm (a) with the parent. Selecting between two finished arms on reads already
+seen is optimistic; the untouched test partitions and the locked read are the guard. Publishing a new Kev-9B still needs
+Jared's explicit OK.
+
+## Round 27 result (2026-09-30) — Kev-9B v2 confirmed
+
+Both arms pass every criterion (`runs/r27-readout/round27.json`); the candidate is `9b-r18a` (lr 2e-5, the larger
+primary sum). Served at the pool temperature (arm (a) T 2.194 [2.047, 2.406], arm (b) 2.000, 648 questions); against the
+released Kev-9B at its shipped 2.30:
+
+| arm | primary (hard + devtools dev) | hard-v1 dev | devtools-v1 dev | documents-v1 dev | short acc | short Brier | hard ECE |
+|---|---|---|---|---|---|---|---|
+| 9b-r18a | **+19.3 [+17.2, +21.6]** | +23.8 | +13.0 | **+7.0 [+4.8, +9.2]** | +0.1 [−1.1, +1.2] | −0.000 [−0.009, +0.009] | −0.023 |
+| 9b-r18b | +16.5 [+14.4, +18.7] | +19.0 | +13.0 | +6.4 [+4.3, +8.6] | −0.4 [−1.5, +0.8] | +0.003 [−0.006, +0.011] | −0.014 |
+
+**Confirmation of 9b-r18a** (`runs/r27-verdict/9b-{tests,locked}.json`, each read once): tests PASS — hard-v1 + devtools-v1
+test pooled +18.7 [+16.7, +20.8] (hard-v1 +25.0, devtools-v1 +9.9 with the audit's exclusions), documents-v1 test +7.1
+[+4.7, +9.2], documents-v2 (reported) +8.0 [+5.9, +10.2]; locked PASS — transfer-v4 test accuracy +0.0 [−1.7, +1.8]
+(0.852 both, bar −1 pp), served Brier −0.025 [−0.047, −0.007] (0.199 vs 0.224). The parent's test reads are the 2026-09-30
+family reads of `jaredpalmer/kev-9b@2629c06a` (`runs/r27c-9b-parent-*`). Infrastructure: the spec's `app` is `kev-r27`
+(the registered `kev` named no deployed app, and the first locked launch failed before reading anything).
+
+## Release candidate: Kev-9B v2 (staged, not published)
+
+- `/runs/r18-9b/00-trial-0/checkpoint` copied to `/runs/release/kev-9b-r27/checkpoint` (`modal_app.py::release_copy`;
+  adapter sha256 `2b2a70cf…` equal). `head.pt` T set to the round's pool fit, 2.193649959389252, by
+  `scripts/calibrate_checkpoint.py --temperature ... --reason ...` (it cannot list round15/joint's sources to refit; the
+  pool was checked against the arm's `trained_on` by `kev.rounds validate`), put back on the volume (`8e1dab2c…`). A read
+  of the staged copy on semif-v1 (`runs/rel9-staged-semif`) reproduces round 18's rows at T 2.19 (0 flips; logits equal
+  to the raw ones over T).
+- Numbers: `experiments/releases/kev-9b-r27.json` → `runs/release/kev-9b-r27.json`; card `docs/model-cards/kev-9b-v2.md`.
+  Whole suites against the released Kev-9B: hard-v1 test 0.584 → 0.834, devtools-v1 test 0.637 → 0.791, documents-v1
+  test 0.829 → 0.900, documents-v2 0.821 → 0.900; breadth-v1 test 0.692 → 0.698 (index 40.0 → 41.0), transfer-v4 dev,
+  transfer-r3 test and the locked test level; MMLU-Pro 0.515 → 0.590.
+- Not done, awaiting Jared's OK: the Hub upload (tag the current `jaredpalmer/kev-9b` main first, as `v1`), the README
+  and `docs/model-cards/kev-9b.md` swap, and `kev-deploy` / `kev-finetune`'s pins.
+
 ## Next
 
 Goals and open questions, not registered rounds; each becomes a spec and a PLAN section before it runs.
@@ -2658,6 +2724,7 @@ outcomes.
 | Round 25 | 09-28/29 | continued full-weight SFT from Kev-27B (LoRA merged) on `sft-v2-r25` (breadth + b1v2 replay, no long-document families, states ≤ 16k), lr 1e-6 / 2e-6, 8 candidates (snapshots + finals), round 24's rule | no candidate (0 of 8): every arm fails breadth ECE (0.023-0.035 vs 0.0176); lr 1e-6 s75 / final fail only that (11/12); lr 2e-6 also short-state accuracy and the breadth primary; CUAD accuracy held, CUAD ECE did not; none ahead of `27b-k-w85` (report only) | `r25.json`; `runs/r25-readout`; "Round 25 result" |
 | Round 26 | 09-29 | round 25's lr 1e-6 arm with tasksource-v1 doubled (`sft-v2-r26`: sft-v2-r25 + 13,000 tasksource-v1 records, 58,515), one study, 4 candidates, round 24's rule | no candidate (0 of 4): every arm fails breadth ECE (0.020-0.029 vs 0.0176); the final fails only that (11/12), the snapshots also the breadth primary, s50 also short-state accuracy; against round 25's lr 1e-6 arm breadth and breadth ECE level (report only); none ahead of `27b-k-w85` (report only) | `r26.json`; `runs/r26-readout`; "Round 26 result" |
 | WANLI and TypeSafe removed | 09-30 | `evals/external/{wanli-v2, wanli-v1, typesafe-v1}` removed as unsound for a gate (a quarter of WANLI's gold labels are one of two disagreeing annotators'; TypeSafe's gold is two closed frontier models' averaged answer, split-half r about 0) | past verdicts stand; SemIf is the only external read from round 27, report only | "WANLI and TypeSafe removed"; `kev.suite.REMOVED_SUITES` |
+| Round 27 | 09-30 | post-hoc, no training: round 18's two 9B documents + skills deltas on the audited rule at a held-out-pool temperature | **`9b-r18a` confirmed** (both arms pass; tests: pooled +18.7, documents-v1 +7.1; locked transfer-v4 +0.0 [−1.7, +1.8], Brier −0.025); staged as Kev-9B v2, not published | `r27.json`; "Round 27 result"; `runs/r27-readout`, `runs/r27-verdict` |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |
 | drift-v1 | 09-30 | why Kev-27B v1's semif-v1 logits differ between its 09-23 read and the 09-30 public read (max \|Δp\| 0.032, argmax equal) | report: #125's causal-conv1d CUDA kernel in the Modal image (replacing transformers' PyTorch conv in the 48 DeltaNet layers); no code drift (09-23 code and `main` bit-identical on the same kernels), no nondeterminism; breadth-v1 offset acc −0.1 pp, ECE +0.0008, 13/3,075 flips, below every round-25/26 margin; fp32 Qwen3.5 reads on CUDA carry fla's TF32 dots (≈ 0.003 in p) | `runs/drift-v1/REPORT.md`; AGENTS.md "What fp32-exact guarantees" |
 
