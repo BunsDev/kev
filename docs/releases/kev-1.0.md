@@ -70,9 +70,23 @@ uv run --extra serve python -m kev.serve --run kev-4b --port 8009
 
 The TypeSafe SDK works unchanged: `TypeSafeClient(api_key="local", base_url="http://127.0.0.1:8009", model="kev-latest")`. Kev-27B needs one B200, H200 or H100 80 GB: `--run jaredpalmer/kev-27b@v1.0`. To deploy an HTTPS endpoint on Modal, see `skills/kev-deploy`.
 
+## Assets
+
+Each tarball holds one checkpoint as it is on the Hub at its weights revision (LoRA adapter, `head.pt` with the temperature, tokenizer files, the training trial's `result.json`, `provenance.json`, `training_config.json`, `training_metrics.json` and log), the Kev 1.0 model card as `README.md`, and the locked transfer-v4 read as `locked_test.json`. They are built by `scripts/build_release_assets.py` from `docs/releases/kev-1.0-assets.json`, and rebuilding gives the same bytes.
+
+| File | SHA-256 | Checkpoint | adapter / head SHA-256 |
+|---|---|---|---|
+| `kev-0.8b.tar.gz` (46 MB) | `943891a2f9a652d7cffd5f83e5e56e1df0d5b9e164f652f05f29f514cac5adc5` | `jaredpalmer/kev-0.8b@9a45d25e` | `9b908623…` / `f400bd12…` |
+| `kev-4b.tar.gz` (131 MB) | `6f87da108149bcde761fd61a978b1bd4863cabb43a7d6add712fe2c4ea7e1bf8` | `jaredpalmer/kev-4b@139fdd94` | `90e81735…` / `dd633435…` |
+| `kev-9b.tar.gz` (172 MB) | `905188502c465691265c479f5ad88a7127a2c10bc87d213e86f9c4b0c04b5f44` | `jaredpalmer/kev-9b@b5d8c18e` | `2b2a70cf…` / `8e1dab2c…` |
+
+Kev-27B is not attached, because its 51 GB of weights are over GitHub's 2 GB limit per asset. Download it from the Hub: [`jaredpalmer/kev-27b@v1.0`](https://huggingface.co/jaredpalmer/kev-27b/tree/v1.0) (weights commit `28be62e9`, `head.pt` `7968f17b…`).
+
+On every Hub repo, the `v1.0` tag points to the commit that uploaded the Kev 1.0 card. That commit changed only `README.md`, so its weights are the same bytes as the weights revision in the first table: kev-0.8b `bf75a6a8`, kev-4b `6cfce5c2`, kev-9b `db029f08`, kev-27b `af0e6d55`.
+
 ## Release plan (for the maintainer; not part of the published notes)
 
-Nothing below step 1 has been done. Order:
+**Done 2026-10-01** (record `runs/release/kev-1.0.json`; PLAN.md "Released: Kev 1.0"). Steps 3 and 4: card-only commits, with `v1.0` on each card commit (0.8B `bf75a6a8`, 4B `6cfce5c2`, 9B `db029f08`, 27B `af0e6d55`; every other file unchanged). Steps 5 and 6: assets built twice with identical hashes, the release published and marked Latest. Step 7: `kev-family` kept, its assets removed, its body a pointer to `kev-1.0`, its old notes in `runs/release/kev-family-notes-retired.md`. Step 8: pins unchanged. Step 9: collection and Space checked; the Space was not republished. The plan as written before the release follows. Order:
 
 1. **Placeholders: filled** (2026-10-01) from round 28's registered context read-out, `runs/r28-readout/context.json` (`scripts/longdoc_report.py --context-margin -0.03` over `runs/r28-{4b-r10,08b-r15}-longdoc`, `runs/r29-9b-r18a-longdoc` and `runs/r23-27b-k-w85-longdoc`; raw `runs/r28-context`, ECE at the shipped T `runs/r28-context-served`), with the numbers in `docs/claims.json`.
 2. **Merge** this PR.

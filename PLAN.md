@@ -15,7 +15,7 @@ All four are public in the [Kev collection](https://huggingface.co/collections/j
 Kev-4B round 10 and Kev-0.8B round 15 were released and Kev-27B made public on 2026-09-24 (docs in PR #106). Kev-27B v2
 (round 23's `27b-k-w85`, full weights) replaced it on 2026-09-30; v1 (the LoRA adapter) stays at `jaredpalmer/kev-27b@v1-lora`
 ("Released: Kev-27B v2"). Kev-9B v2 (round 27's `9b-r18a`) replaced Kev-9B the same day; v1 stays at `jaredpalmer/kev-9b@v1`
-("Released: Kev-9B v2"). These four are the Kev 1.0 release candidate (below).
+("Released: Kev-9B v2"). These four were released together as Kev 1.0 on 2026-10-01 (below; "Released: Kev 1.0").
 
 | model | checkpoint | T | locked transfer-v4: acc / Brier | other confirmation reads (once each) | JevBench public: all / hard (hard ECE) |
 |---|---|---|---|---|---|
@@ -34,21 +34,20 @@ Evidence: `runs/release/kev-{27b-r23,27b-v2,9b-r27,4b-r10,08b-r15}.json` (`kev-2
 `runs/release/kev-27b-r23-published.json`, `runs/jevbench-public/`, the model cards. Previous weights are Hub tags (`kev-27b@v1-lora`,
 `kev-4b@r8-documents-release`, `kev-4b@night2-du-release`, `kev-0.8b@night2-du-release`, `@v7-base`).
 
-### Kev 1.0 baseline (release candidate)
+### Kev 1.0 baseline (released 2026-10-01)
 
 **Kev 1.0 is the baseline Kev 2 is measured against.** A Kev 2 candidate at a given size is compared with the Kev 1.0
 checkpoint of that size on identical items, at each side's shipped temperature, and the 1.0 reads below are its parent reads.
-Kev 1.0 trains nothing: it versions the four released checkpoints with their formal cards (PR "Kev 1.0 release candidate";
-not merged, nothing published). The plan is `docs/releases/kev-1.0.md`: Hub tag `v1.0` on all four repos, GitHub release
-`kev-1.0` with the three adapter tarballs (`scripts/build_release_assets.py`, spec `docs/releases/kev-1.0-assets.json`) and
-Kev-27B on the Hub only.
+Kev 1.0 trains nothing: it versions the four released checkpoints with their formal cards (PR #206). Load a parent as
+`jaredpalmer/kev-<size>@v1.0`; the GitHub release `kev-1.0` has the three adapter tarballs and Kev-27B is on the Hub only
+("Released: Kev 1.0", `runs/release/kev-1.0.json`).
 
 | size | checkpoint (trial) | Hub revision (weights) | T (fit) | locked transfer-v4 acc / Brier | breadth-v1 test index (all 14) | transfer-v4 dev | validated context |
 |---|---|---|---|---|---|---|---|
 | Kev-0.8B | `r15-08b/00-trial-0` | `9a45d25e` | 2.35 (in-distribution; kept by round 28) | 0.697 / 0.397 | 23.3 [21.2, 25.9] | 0.648 | 8,192 (16k lower bound −8.5 pp, `runs/r28-readout/context.json`) |
 | Kev-4B | `r10-skills/00-trial-0` | `139fdd94` | 2.41 (in-distribution; kept by round 28) | 0.838 / 0.224 | 38.0 [35.5, 41.3] | 0.817 | 8,192 (16k lower bound −3.4 pp, `runs/r28-readout/context.json`) |
 | Kev-9B v2 | `r18-9b/00-trial-0` (round 27 `9b-r18a`) | `b5d8c18e` | 2.19 (held-out pool) | 0.852 / 0.199 | 41.0 [38.8, 43.9] | 0.820 | 8,192 (16k lower bound −3.7 pp, `runs/r28-readout/context.json`) |
-| Kev-27B v2 | round 23 `27b-k-w85` | `28be62e9` (main `ef78cc8a`: card commits since) | 1.32 (held-out pool) | 0.889 / 0.154 | 52.3 [49.2, 55.4] | 0.851 | 65,536 (64k lower bound −2.4 pp, `runs/r28-readout/context.json`) |
+| Kev-27B v2 | round 23 `27b-k-w85` | `28be62e9` (`v1.0` = `af0e6d55`: card commits since) | 1.32 (held-out pool) | 0.889 / 0.154 | 52.3 [49.2, 55.4] | 0.851 | 65,536 (64k lower bound −2.4 pp, `runs/r28-readout/context.json`) |
 | Jev (reference) | hosted | – | – | not read | 54.0 [51.2, 57.0] | 0.857 | – |
 
 - Index: `runs/fam-breadth-test-report/report.json` (2026-09-30 family reads; Kev-27B v2's row is round 23's
@@ -2672,6 +2671,41 @@ family reads of `jaredpalmer/kev-9b@2629c06a` (`runs/r27c-9b-parent-*`). Infrast
   `kev-family`: `kev-9b.tar.gz` rebuilt from the Hub commit (+ `locked_test.json`), `SHA256SUMS.txt` regenerated.
 - The kev-deploy / kev-finetune `KEV_REF` pins are unchanged: v2 is an adapter of the same shape, served by the same code.
 
+## Released: Kev 1.0 (2026-10-01)
+
+Jared approved the release of PR #206's package. Nothing was trained or re-read; the steps are `docs/releases/kev-1.0.md`'s
+maintainer plan, and the record is `runs/release/kev-1.0.json`.
+
+- **Hub.** Each 1.0 card was uploaded as `README.md` in a card-only commit (`parent_commit` = main before), then the
+  annotated tag `v1.0` was put on that commit, so `@v1.0` shows the 1.0 card (plan step 4's alternative). Before each upload,
+  main had the release weights: 0.8B, 4B and 9B main were the weights revisions, and 27B main (`ef78cc8a`) differed from
+  `28be62e9` only in `README.md`. After each upload, every other file has the same blob and LFS sha256, `README.md` matches
+  the repo card byte for byte, and `card_data` parses with the card's `base_model` / `base_model_relation`.
+
+  | repo | weights | `v1.0` (card commit) | adapter / head |
+  |---|---|---|---|
+  | `kev-0.8b` | `9a45d25e` | `bf75a6a8` | `9b908623…` / `f400bd12…` |
+  | `kev-4b` | `139fdd94` | `6cfce5c2` | `90e81735…` / `dd633435…` |
+  | `kev-9b` | `b5d8c18e` | `db029f08` | `2b2a70cf…` / `8e1dab2c…` |
+  | `kev-27b` | `28be62e9` | `af0e6d55` | 11 shards unchanged / `7968f17b…` |
+- **GitHub.** The release `kev-1.0` (tag on PR #206's merge, `6b719c3`) is published and marked Latest. Its body is
+  `docs/releases/kev-1.0.md` above the maintainer plan, which now includes an Assets section. Assets come from
+  `scripts/build_release_assets.py`, and a second build gave the same `SHA256SUMS.txt`: `kev-0.8b.tar.gz` `943891a2…`,
+  `kev-4b.tar.gz` `6f87da10…`, `kev-9b.tar.gz` `90518850…`, `SHA256SUMS.txt` `bc5c520e…`
+  (`runs/release/kev-1.0-{SHA256SUMS.txt,manifest.json}`). Kev-27B is linked as `jaredpalmer/kev-27b@v1.0`.
+- **kev-family** (plan step 7) is retired but not deleted. Its three tarballs and `SHA256SUMS.txt` were removed after checking
+  that the adapters and heads inside were byte-identical to 1.0's. It is renamed "Kev family (superseded by Kev 1.0)", its
+  body is a pointer to `kev-1.0` that lists the removed assets' hashes, and its tag is kept. Its old notes are in
+  `runs/release/kev-family-notes-retired.md`.
+- **Verification.** Each `jaredpalmer/kev-<size>@v1.0` was resolved through `kev.checkpoint` with no token and a fresh
+  cache. It resolves to its card commit, the adapter, head and 27B shard hashes match, and the temperatures are 2.35 / 2.41 / 2.19 / 1.32.
+  On a 2-record smoke benchmark (`evals/smoke-v1` development, MPS, fp32), 0.8B and 4B from the tag scored 2 of 2, and
+  `kev-0.8b.tar.gz` from the release gave logits identical to the tag's (`runs/release/kev-1.0-verify/`). The extracted tarball
+  served a System One request. The assets were downloaded again anonymously and `shasum -c` passed. The collection lists all
+  four repos. The Space is RUNNING and `/decide` answers on Kev-4B and Kev-0.8B. It was not republished: its vendored
+  `kev/checkpoint.py` lacks only #200's MLX full-weight path, which the Space does not use.
+- `KEV_REF` pins (71d4829) are unchanged: the 1.0 checkpoints need no newer code.
+
 ## Next
 
 Goals and open questions, not registered rounds; each becomes a spec and a PLAN section before it runs.
@@ -3026,7 +3060,8 @@ outcomes.
 | Round 27 | 09-30 | post-hoc, no training: round 18's two 9B documents + skills deltas on the audited rule at a held-out-pool temperature | **`9b-r18a` confirmed** (both arms pass; tests: pooled +18.7, documents-v1 +7.1; locked transfer-v4 +0.0 [−1.7, +1.8], Brier −0.025); staged as Kev-9B v2, not published | `r27.json`; "Round 27 result"; `runs/r27-readout`, `runs/r27-verdict` |
 | Release: Kev-9B v2 | 09-30 | round 27's `9b-r18a` published to `jaredpalmer/kev-9b` main (`b5d8c18e`, adapter `2b2a70cf…`, T 2.19); v1 tagged `v1` first | **released**; anonymous Hub load reproduces round 18's reads (argmax 252/252, 764/764); `@v1` loads v1 at T 2.30 | "Released: Kev-9B v2"; `runs/rel9-public/` |
 | Round 28 | 09-30 | post-hoc, no training: Kev-4B / Kev-0.8B temperatures refitted on the held-out pool; validated context length per size (report only) | no candidate at either size: `4b-r10` fails both primaries (Brier −0.0001 [−0.0005, +0.0003], ECE 0.0252 vs 0.0240); `08b-r15` passes both and fails the hard / devtools / documents ECE guards; shipped T 2.41 / 2.35 stay; validated context (report only) 8,192 for 0.8B / 4B / 9B v2, 65,536 for 27B v2 | `r28.json`; `runs/r28-readout`; "Round 28 (registered)" |
-| Kev 1.0 (release candidate) | 09-30 | the four released checkpoints versioned as one family: formal cards for all four, README family table, release notes and asset builder; no training, no new read | **staged, not published**: Hub tag `v1.0` (0.8B `9a45d25e`, 4B `139fdd94`, 9B `b5d8c18e`, 27B main) and GitHub release `kev-1.0` planned; validated context 8,192 (0.8B, 4B, 9B) / 65,536 (27B); the baseline Kev 2 is measured against | "Kev 1.0 baseline (release candidate)"; `docs/releases/kev-1.0.md`, `docs/releases/kev-1.0-assets.json` |
+| Kev 1.0 (release candidate) | 09-30 | the four released checkpoints versioned as one family: formal cards for all four, README family table, release notes and asset builder; no training, no new read | packaged (PR #206); validated context 8,192 (0.8B, 4B, 9B) / 65,536 (27B); the baseline Kev 2 is measured against | "Kev 1.0 baseline"; `docs/releases/kev-1.0.md`, `docs/releases/kev-1.0-assets.json` |
+| Release: Kev 1.0 | 10-01 | the four checkpoints published as one versioned family: card-only Hub commits + tag `v1.0` on each (0.8B `bf75a6a8`, 4B `6cfce5c2`, 9B `db029f08`, 27B `af0e6d55`; weights unchanged), GitHub release `kev-1.0` with three deterministic adapter tarballs + `SHA256SUMS.txt`, `kev-family` retired to a pointer | **released**; anonymous `@v1.0` loads at T 2.35 / 2.41 / 2.19 / 1.32 with matching hashes, smoke reads and tarball logits identical to the tag's, assets re-downloaded and checked, Space `/decide` answers | "Released: Kev 1.0"; `runs/release/kev-1.0.json` |
 | breadth-v1 | 09-24 | frozen eval-only panel over the Decision Index's five areas (14 held-out datasets, 150 records each, locked test unread); development baselines | report: chance-corrected index Jev 53.3, AutoJev-27B 51.7, Kev-27B 50.2, Kev-4B 40.8 (Kev-27B vs Jev −3.1 [−6.2, +0.1]); Kev-27B trails most on retrieval (SGD, CLINC150) | `evals/breadth-v1/manifest.json`; `runs/breadth-v1-report/report.md` |
 | drift-v1 | 09-30 | why Kev-27B v1's semif-v1 logits differ between its 09-23 read and the 09-30 public read (max \|Δp\| 0.032, argmax equal) | report: #125's causal-conv1d CUDA kernel in the Modal image (replacing transformers' PyTorch conv in the 48 DeltaNet layers); no code drift (09-23 code and `main` bit-identical on the same kernels), no nondeterminism; breadth-v1 offset acc −0.1 pp, ECE +0.0008, 13/3,075 flips, below every round-25/26 margin; fp32 Qwen3.5 reads on CUDA carry fla's TF32 dots (≈ 0.003 in p) | `runs/drift-v1/REPORT.md`; AGENTS.md "What fp32-exact guarantees" |
 
