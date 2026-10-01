@@ -1,9 +1,10 @@
 {
   "release": "kev-1.0",
+  "source_date_epoch": 1790812800,
   "assets": [
     {
       "file": "kev-0.8b.tar.gz",
-      "sha256": "943891a2f9a652d7cffd5f83e5e56e1df0d5b9e164f652f05f29f514cac5adc5",
+      "sha256": "0ae144c7675f0c3f333be0bb878a0f202ab9e6fa84169fb7cb16efe6176c1ef1",
       "repo": "jaredpalmer/kev-0.8b",
       "revision": "9a45d25eb2ab761841196625383fa1dff0e56c1e",
       "files": {
@@ -23,7 +24,7 @@
     },
     {
       "file": "kev-4b.tar.gz",
-      "sha256": "6f87da108149bcde761fd61a978b1bd4863cabb43a7d6add712fe2c4ea7e1bf8",
+      "sha256": "2e707e2ebd08980dc7881222b7024cea5606401441c1a086afb170ae7784201c",
       "repo": "jaredpalmer/kev-4b",
       "revision": "139fdd94f1b6a6ad80cc15e08fcb99cac885a101",
       "files": {
@@ -47,7 +48,7 @@
     },
     {
       "file": "kev-9b.tar.gz",
-      "sha256": "905188502c465691265c479f5ad88a7127a2c10bc87d213e86f9c4b0c04b5f44",
+      "sha256": "acd13320b7d1b052ce989f19ca9d1d9ba5219b8beced0ee67337908aef1deb3f",
       "repo": "jaredpalmer/kev-9b",
       "revision": "b5d8c18e44c60888d138b65cb6507ff0a5a448a0",
       "files": {

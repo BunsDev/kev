@@ -2690,9 +2690,14 @@ maintainer plan, and the record is `runs/release/kev-1.0.json`.
   | `kev-27b` | `28be62e9` | `af0e6d55` | 11 shards unchanged / `7968f17b…` |
 - **GitHub.** The release `kev-1.0` (tag on PR #206's merge, `6b719c3`) is published and marked Latest. Its body is
   `docs/releases/kev-1.0.md` above the maintainer plan, which now includes an Assets section. Assets come from
-  `scripts/build_release_assets.py`, and a second build gave the same `SHA256SUMS.txt`: `kev-0.8b.tar.gz` `943891a2…`,
-  `kev-4b.tar.gz` `6f87da10…`, `kev-9b.tar.gz` `90518850…`, `SHA256SUMS.txt` `bc5c520e…`
-  (`runs/release/kev-1.0-{SHA256SUMS.txt,manifest.json}`). Kev-27B is linked as `jaredpalmer/kev-27b@v1.0`.
+  `scripts/build_release_assets.py`, and a second build gave the same `SHA256SUMS.txt`: `kev-0.8b.tar.gz` `0ae144c7…`,
+  `kev-4b.tar.gz` `2e707e2e…`, `kev-9b.tar.gz` `acd13320…`, `SHA256SUMS.txt` `495d104f…`
+  (`runs/release/kev-1.0-{SHA256SUMS.txt,manifest.json}`). Kev-27B is linked as `jaredpalmer/kev-27b@v1.0`. These are the
+  replacement assets. The first upload (`943891a2…`, `6f87da10…`, `90518850…`, sums `bc5c520e…`) zeroed every file's mtime,
+  so `kev.serve` reported an unpacked checkpoint's release date as 1969-12-31. PR #209 made the builder stamp
+  2026-10-01 00:00 UTC (`SOURCE_DATE_EPOCH`) and made `Checkpoint.release_date` read UTC and skip pre-2000 mtimes. The
+  tarballs were rebuilt and replaced the same day. Their members are byte-identical; only the mtimes differ
+  (`runs/release/kev-1.0.json` `github.replaced_assets`).
 - **kev-family** (plan step 7) is retired but not deleted. Its three tarballs and `SHA256SUMS.txt` were removed after checking
   that the adapters and heads inside were byte-identical to 1.0's. It is renamed "Kev family (superseded by Kev 1.0)", its
   body is a pointer to `kev-1.0` that lists the removed assets' hashes, and its tag is kept. Its old notes are in

@@ -135,31 +135,42 @@
     "published_at": "2026-10-01T17:25:27Z",
     "latest": true,
     "body": "docs/releases/kev-1.0.md above '## Release plan', without the H1 (the release title is 'Kev 1.0')",
-    "built_with": "uv run python scripts/build_release_assets.py --release docs/releases/kev-1.0-assets.json --out /tmp/kev-1.0-assets (adapter + head sha256 checked against the spec; no placeholders); rebuilt into a second directory: identical SHA256SUMS.txt",
+    "built_with": "uv run python scripts/build_release_assets.py --release docs/releases/kev-1.0-assets.json --out /tmp/kev-1.0-dated-a, from main 1b89bff (PR #209), release_date 2026-10-01 -> every member and the gzip header at mtime 1790812800 (2026-10-01T00:00:00Z; manifest source_date_epoch); adapter + head sha256 checked against the spec; rebuilt into a second directory: all three tarballs, SHA256SUMS.txt and manifest.json byte-identical",
     "assets": {
       "kev-0.8b.tar.gz": {
-        "sha256": "943891a2f9a652d7cffd5f83e5e56e1df0d5b9e164f652f05f29f514cac5adc5",
+        "sha256": "0ae144c7675f0c3f333be0bb878a0f202ab9e6fa84169fb7cb16efe6176c1ef1",
         "repo": "jaredpalmer/kev-0.8b",
         "revision": "9a45d25eb2ab761841196625383fa1dff0e56c1e",
         "adapter_sha256": "9b908623acb162118575f4e7a94524f9c139c335be4bfb74d6cfceca01e1885a",
         "head_sha256": "f400bd12802b2b105ae45d6b03774a158a3db4fccff42413734ddca2e5c920b6"
       },
       "kev-4b.tar.gz": {
-        "sha256": "6f87da108149bcde761fd61a978b1bd4863cabb43a7d6add712fe2c4ea7e1bf8",
+        "sha256": "2e707e2ebd08980dc7881222b7024cea5606401441c1a086afb170ae7784201c",
         "repo": "jaredpalmer/kev-4b",
         "revision": "139fdd94f1b6a6ad80cc15e08fcb99cac885a101",
         "adapter_sha256": "90e817356246e7f18bfa7ca3d31794cd4fbeb3332a66a84cb51d9ceae925f2b2",
         "head_sha256": "dd633435998ecc751ac538717a3742e32149500fabf7d7276287dbf0693f347c"
       },
       "kev-9b.tar.gz": {
-        "sha256": "905188502c465691265c479f5ad88a7127a2c10bc87d213e86f9c4b0c04b5f44",
+        "sha256": "acd13320b7d1b052ce989f19ca9d1d9ba5219b8beced0ee67337908aef1deb3f",
         "repo": "jaredpalmer/kev-9b",
         "revision": "b5d8c18e44c60888d138b65cb6507ff0a5a448a0",
         "adapter_sha256": "2b2a70cf4ef4440b6c22899e1f72c2f8ea5c6f65b19aa344539b4b8971d1f13d",
         "head_sha256": "8e1dab2c8e3664f6fee843e0257d57946c25e0210c61901ea77e71761f4244e1"
       }
     },
-    "sha256sums_txt": "bc5c520ea37e650e0731369749c319462b790acaca3e8590808302899bce7e31",
+    "sha256sums_txt": "495d104f5887c46c21f985128e7ed349eaba74d07c3b5ad7ef546c1d77c9e644",
+    "replaced_assets": {
+      "date": "2026-10-01",
+      "why": "The first upload (built with mtime 0 for every member and the gzip header) extracted with every file dated 1970-01-01, and kev.serve reported release_date 1969-12-31 in /v1/models (Checkpoint.release_date dated a local run by head.pt's mtime in local time). PR #209 made the builder stamp the release date (SOURCE_DATE_EPOCH convention) and the loader read UTC and skip pre-2000 mtimes. The tarballs were rebuilt with the fixed builder and replaced with gh release upload --clobber; the release body's asset table was updated to the new hashes. Metadata only: the weights are identical.",
+      "weights_identical": "the same members in the same order with the same mode, size, type, owner and sha256 in the old and new tarballs (adapter_model.safetensors and head.pt equal to docs/releases/kev-1.0-assets.json's expect); only the member mtimes (0 -> 1790812800) and the gzip header mtime differ; manifest.json's per-file hashes are unchanged",
+      "previous_sha256": {
+        "kev-0.8b.tar.gz": "943891a2f9a652d7cffd5f83e5e56e1df0d5b9e164f652f05f29f514cac5adc5",
+        "kev-4b.tar.gz": "6f87da108149bcde761fd61a978b1bd4863cabb43a7d6add712fe2c4ea7e1bf8",
+        "kev-9b.tar.gz": "905188502c465691265c479f5ad88a7127a2c10bc87d213e86f9c4b0c04b5f44",
+        "SHA256SUMS.txt": "bc5c520ea37e650e0731369749c319462b790acaca3e8590808302899bce7e31"
+      }
+    },
     "kev_27b": "Hub only (51 GB > GitHub's 2 GB asset limit): jaredpalmer/kev-27b@v1.0 (card commit af0e6d55, weights commit 28be62e9, head.pt 7968f17b...)",
     "files": [
       "runs/release/kev-1.0-SHA256SUMS.txt",
@@ -268,8 +279,8 @@
       "tarball_vs_hub_0.8b": "logits identical row for row (kev-0.8b.tar.gz from the draft release vs jaredpalmer/kev-0.8b@v1.0)",
       "dirs": "runs/release/kev-1.0-verify/{hub-0.8b,hub-4b,tar-0.8b}"
     },
-    "tarball_serve": "kev.serve --run <extracted kev-0.8b.tar.gz> on MPS (MLX, bf16): /v1/models temperature 2.351; POST /v1/systemone 'charged twice' -> refund 0.7635",
-    "github_assets": "downloaded from the draft (gh release download) and again anonymously from the published URLs (curl): shasum -a 256 -c SHA256SUMS.txt OK for all three; GitHub's asset digests equal SHA256SUMS.txt",
+    "tarball_serve": "kev.serve --run <extracted kev-0.8b.tar.gz> on MPS (MLX, bf16): /v1/models temperature 2.351; POST /v1/systemone 'charged twice' -> refund 0.7635. Replacement: the re-downloaded kev-0.8b.tar.gz extracted with every file at 2026-10-01T00:00:00Z; kev.serve (main 1b89bff, MPS, MLX bf16) /v1/models release_date 2026-10-01 for kev-latest and jev-latest, temperature 2.351",
+    "github_assets": "first upload: downloaded from the draft (gh release download) and again anonymously from the published URLs (curl): shasum -a 256 -c SHA256SUMS.txt OK for all three; GitHub's asset digests equal SHA256SUMS.txt. Replacement (2026-10-01): downloaded anonymously from the published URLs (curl, no token): shasum -a 256 -c SHA256SUMS.txt OK for all three, SHA256SUMS.txt 495d104f... equal to the build; GitHub's asset digests equal SHA256SUMS.txt",
     "collection": "huggingface.co/collections/jaredpalmer/kev-6aad9d0ea49f2589665e07cd lists space jaredpalmer/kev, kev-27b, kev-9b, kev-4b, kev-0.8b (and kev-0.5b)",
     "space": {
       "repo": "jaredpalmer/kev",
