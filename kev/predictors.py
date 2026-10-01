@@ -34,6 +34,28 @@ KERNEL_PACKAGES = ("torch", "transformers", "peft", "flash-linear-attention", "t
 DELTANET_KERNELS = ("causal_conv1d_fn", "torch_chunk_gated_delta_rule")   # the prefill hooks of transformers' GatedDeltaNet
 
 
+@contextlib.contextmanager
+def long_row_kernels():
+    """The attention kernels a long row runs under (LocalPredictor): SDPA's flash and memory-efficient kernels, with the
+    math kernel as the fallback. transformers asks SDPA for grouped-query attention (`enable_gqa`) when a call has no
+    mask, which is the case for an unpadded state (kev.shared_prefix passes no mask so the state runs causal). Of the
+    kernels allowed here only flash and math take `enable_gqa`, and flash has no fp32. So an fp32 state pass used to fall
+    back to math, whose L x L scores do not fit: Kev-4B has 16 heads, so at 32k that is 16 x 32k^2 x 4 B = 69 GB per
+    layer. Inside this context an fp32 call repeats its keys and values per query head instead (transformers' own path
+    whenever a mask is given), and the memory-efficient kernel takes that: fp32 inputs and output, memory linear in L.
+    On sm80+ its fp32 products are cutlass's OpMultiplyAddFastF32 (three TF32 products per product, fp32 accuracy and
+    fp32 accumulation), not plain TF32. bf16 / fp16 calls keep `enable_gqa` and the flash kernel, so Kev-27B's long rows
+    run as before."""
+    from transformers.integrations import sdpa_attention
+    grouped = sdpa_attention.use_gqa_in_sdpa
+    sdpa_attention.use_gqa_in_sdpa = lambda attention_mask, key, value: key.dtype != torch.float32 and grouped(attention_mask, key, value)
+    try:
+        with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]):
+            yield
+    finally:
+        sdpa_attention.use_gqa_in_sdpa = grouped
+
+
 def bound_implementation(fn):
     """The function transformers actually calls for one of its kernel hooks: `use_kernel_func_from_hub_with_fallback`
     wraps the PyTorch reference and binds the package's kernel (fla, causal-conv1d) as `implementation` when it imports;
@@ -74,12 +96,14 @@ class LocalPredictor:
     bf16 backbone is bf16 throughout, so reads repeat bit for bit only on the same kernel set (`self.environment`, from
     kernel_environment; AGENTS.md "What fp32-exact guarantees"). One more exception: on CUDA with the torch backend, a
     record whose longest row (state + one question) exceeds kev.model.ROW_PASS_TOKENS runs under SDPA's flash /
-    memory-efficient kernels, because the exact math kernel's L x L score matrix does not fit (~200 GB per layer pass at
-    64k). Such a prediction carries `"kernels": LONG_ROW_KERNELS`, kev.benchmark copies it onto the record's rows and
-    counts them in report.json's `long_rows`; shorter records carry nothing, so their rows and reports are unchanged. The
-    efficient path is CUDA-only: on CPU / MPS attention stays eager and exact and still materialises L x L. A long record
-    on a hybrid torch backbone also runs its state once, its questions continuing from it (kev.shared_prefix), instead of
-    once per question; the MLX backend's forward already runs the state once."""
+    memory-efficient kernels (long_row_kernels), because the exact math kernel's L x L score matrix does not fit (~275 GB
+    per layer pass at 64k for Kev-4B's 16 heads). An fp32 backbone stays fp32 there: the memory-efficient kernel takes
+    fp32 (Kev-4B / 9B at 8k-16k against the math kernel: max |dp| 6e-4, no flips in 238 questions;
+    scripts/long_state_memory.py). Such a prediction carries `"kernels": LONG_ROW_KERNELS`, kev.benchmark copies it onto
+    the record's rows and counts them in report.json's `long_rows`; shorter records carry nothing, so their rows and
+    reports are unchanged. The efficient path is CUDA-only: on CPU / MPS attention stays eager and exact and still
+    materialises L x L. A long record on a hybrid torch backbone also runs its state once, its questions continuing from
+    it (kev.shared_prefix), instead of once per question; the MLX backend's forward already runs the state once."""
 
     def __init__(self, run, device, opts=LoadOptions(), context=CONTEXT):
         """opts.temperature=None scores with the temperature the checkpoint carries; 1.0 scores raw logits. context: the
@@ -110,7 +134,7 @@ class LocalPredictor:
         long = len(state) + max(len(r["ids"]) for r in rows) > ROW_PASS_TOKENS
         torch_backend = self.model.backend == "torch"
         efficient = long and torch_backend and self.device == "cuda"
-        with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]) if efficient else contextlib.nullcontext():
+        with long_row_kernels() if efficient else contextlib.nullcontext():
             if long and torch_backend and self.model.hybrid: logits = self.model.forward_batch([enc], shared_prefix=True)[0]
             else: logits = self.model.forward(enc)
         ps = [torch.softmax(z, -1).cpu() for z in logits]

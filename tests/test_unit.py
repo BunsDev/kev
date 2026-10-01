@@ -1209,11 +1209,43 @@ def test_local_predictor_scores_long_rows_through_the_shared_prefix(tiny_base, t
     assert shared == [True] and long["input_tokens"] == rows["input_tokens"] and "kernels" not in long and "kernels" not in rows
     for qid, z in rows["logits"].items():
         assert long["logits"][qid] == pytest.approx(z, abs=1e-5)
+    real_kernels, entered = P.long_row_kernels, []
+    monkeypatch.setattr(P, "long_row_kernels", lambda: (entered.append(True), real_kernels())[1])
+    evaluate_records([record], predictor, tmp_path / "long-cpu")
+    assert entered == []   # on the CPU a long row keeps the exact kernels
     monkeypatch.setattr(predictor, "device", "cuda"); monkeypatch.setattr(P, "sync", lambda device: None)   # the CUDA policy, on CPU tensors
     report, scored = evaluate_records([record], predictor, tmp_path / "long")
-    assert shared == [True, True] and [r["kernels"] for r in scored] == [P.LONG_ROW_KERNELS] * 2
+    assert entered == [True] and shared == [True, True, True] and [r["kernels"] for r in scored] == [P.LONG_ROW_KERNELS] * 2
     assert report["long_rows"] == {"count": 2, "records": 1, "kernels": [P.LONG_ROW_KERNELS], "threshold": ROW_PASS_TOKENS}
     assert [x for r in scored for x in r["logits"]] == pytest.approx([x for z in rows["logits"].values() for x in z.values()], abs=1e-5)
+    monkeypatch.setattr(P, "ROW_PASS_TOKENS", ROW_PASS_TOKENS)
+    short_report, short_rows = evaluate_records([record], predictor, tmp_path / "short-cuda")
+    assert entered == [True] and "long_rows" not in short_report and not any("kernels" in r for r in short_rows)   # under the threshold on CUDA: neither
+
+
+def test_long_row_kernels_repeat_fp32_keys_instead_of_grouped_attention(monkeypatch):
+    """kev.predictors.long_row_kernels: an fp32 SDPA call without a mask (a long unpadded state, kev.shared_prefix) repeats
+    its keys and values per query head instead of asking SDPA for `enable_gqa`, which only the flash and math kernels take
+    (flash has no fp32, so the call fell to math and its L x L scores: the small family's OOM on 32k-64k states). A bf16
+    call keeps `enable_gqa` (Kev-27B's flash kernel); outside the context nothing changes, and the output is the same
+    attention either way."""
+    from transformers.integrations import sdpa_attention as S
+    from kev.predictors import long_row_kernels
+    calls, real = [], torch.nn.functional.scaled_dot_product_attention
+    monkeypatch.setattr(torch.nn.functional, "scaled_dot_product_attention", lambda q, k, v, **kw: (calls.append((k.shape[1], kw.get("enable_gqa", False))), real(q, k, v, **kw))[1])
+    module = torch.nn.Module(); module.num_key_value_groups = 4
+    g = torch.Generator().manual_seed(0)
+    q, k, v = (torch.randn(1, h, 24, 16, generator=g) for h in (8, 2, 2))
+    grouped = S.use_gqa_in_sdpa
+    out, _ = S.sdpa_attention_forward(module, q, k, v, None, is_causal=True)
+    with long_row_kernels():
+        repeated, _ = S.sdpa_attention_forward(module, q, k, v, None, is_causal=True)
+        S.sdpa_attention_forward(module, q.bfloat16(), k.bfloat16(), v.bfloat16(), None, is_causal=True)
+        S.sdpa_attention_forward(module, q, k, v, torch.ones(1, 1, 24, 24, dtype=torch.bool).tril())   # a mask: transformers repeats anyway
+    assert S.use_gqa_in_sdpa is grouped   # restored
+    S.sdpa_attention_forward(module, q, k, v, None, is_causal=True)
+    assert calls == [(2, True), (8, False), (2, True), (8, False), (2, True)]
+    assert torch.allclose(out, repeated, atol=1e-6)
 
 
 def test_benchmark_report_records_the_kernel_environment(tiny_base, tmp_path, monkeypatch):

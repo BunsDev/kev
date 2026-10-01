@@ -351,6 +351,43 @@ def test_cuda_graphs_match_eager():
     assert graphs.captures > 0 and not graphs.pending
 
 
+def test_long_rows_run_fp32_attention_in_linear_memory():
+    """kev.predictors.LocalPredictor on CUDA in fp32 (Kev-0.8B): a record past ROW_PASS_TOKENS runs its state once through
+    SDPA's memory-efficient kernel in fp32 (long_row_kernels) and is labelled. Before, the state pass fell back to the math
+    kernel, whose L x L scores ran the small family out of memory on 32k-64k states. Here the long pass stays far under
+    the math kernel's score matrix, while the same shared-prefix pass under the math kernel exceeds it. Its answers match
+    the math pass: scripts/long_state_memory.py measured max |dp| <= 6.4e-4 and 0 flips for Kev-4B / 9B at 8k-16k."""
+    import torch
+    if not torch.cuda.is_available(): pytest.skip("needs CUDA")
+    from kev.data import materialize
+    from kev.device import allocated_bytes, empty_cache, sync
+    from kev.model import ROW_PASS_TOKENS, rows_of
+    from kev.predictors import LONG_ROW_KERNELS, LocalPredictor
+    from kev.suite import SERVING_CONTEXT
+    p = LocalPredictor(KEV_08B, "cuda", context=SERVING_CONTEXT)
+    unit = "Order 4411 arrived late and the box was crushed. Two charges appear on the card for the same order. "
+    record = {"state": unit * 900, "questions": {"billing": {"type": "noul", "instructions": "Is there a billing problem?", "label": True, "src": "t"},
+                                                   "team": {"type": "choice", "instructions": "Which team should handle this?",
+                                                            "criteria": {"returns": None, "shipping": None, "billing": None, "other": None}, "label": "billing", "src": "t"}}}
+    enc = p.model.encode(p.tok, materialize(record), max_state=SERVING_CONTEXT["max_state"], max_branch=SERVING_CONTEXT["max_branch"])
+    L = len(rows_of(enc)[0]); config = p.model.lm.config.get_text_config()
+    scores = config.num_attention_heads * L * L * 4   # one fp32 L x L score matrix per head: what the math kernel materialises
+    assert ROW_PASS_TOKENS < L < 32768
+
+    def peak(fn):
+        empty_cache("cuda"); torch.cuda.reset_peak_memory_stats(); base = torch.cuda.memory_allocated()
+        out = fn(); sync("cuda")
+        return out, allocated_bytes("cuda") - base   # the CUDA peak since the reset
+    long, long_bytes = peak(lambda: p(record))
+    with torch.no_grad():
+        math, math_bytes = peak(lambda: [torch.softmax(z, -1).cpu() for z in p.model.forward_batch([enc], shared_prefix=True)[0]])
+    assert long["kernels"] == LONG_ROW_KERNELS
+    assert long_bytes < scores / 4 and math_bytes > scores, (long_bytes, math_bytes, scores)
+    for qid, ref in zip(record["questions"], math):
+        got = torch.tensor(list(long["probabilities"][qid].values()))
+        assert (got - ref).abs().max() < 2e-3 and got.argmax() == ref.argmax()
+
+
 def test_server_recovers_when_a_pass_runs_out_of_memory():
     """kev.serve.Server._run on CUDA, served as kev.serve serves it (bf16, CUDA graphs, fused kernels): a new state whose
     pass cannot fit beside a full prefix cache raises a genuine torch.OutOfMemoryError inside the model, the server drops
