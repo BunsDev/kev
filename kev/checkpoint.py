@@ -28,6 +28,7 @@ import torch
 from .model import DecisionModel, is_hybrid, load_tokenizer, pad_id
 
 HUB_ID = re.compile(r"[\w.-]+/[\w.-]+(@[\w.-]+)?")
+MTIME_FLOOR = datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc).timestamp()   # older file times are zeroed, not dates (Checkpoint.release_date)
 
 
 def is_hub_id(run):
@@ -199,8 +200,11 @@ class Checkpoint:
         return hashlib.sha256("".join(f"{p.name}:{digest(p)}\n" for p in self.shards()).encode()).hexdigest()
 
     def release_date(self):
-        """ISO date for the TypeSafe model card: the Hub commit date for a Hub checkpoint (falls back to the cached file's
-        date offline), the time head.pt was written for a local run."""
+        """ISO date for the TypeSafe model card: the Hub commit date for a Hub checkpoint. For a local run, or a Hub
+        checkpoint offline (its cached files), the UTC date head.pt was written, else the newest of the checkpoint's
+        files, else "unknown". An mtime before 2000 is not a date: archives zero it for reproducibility (Kev 1.0's first
+        release tarballs did), and it reads as 1970-01-01 (1969-12-31 west of UTC). scripts/build_release_assets.py stamps
+        the release date instead."""
         if is_hub_id(self.requested):
             from huggingface_hub import HfApi
             repo, _, revision = self.requested.partition("@")
@@ -208,7 +212,9 @@ class Checkpoint:
                 return HfApi().model_info(repo, revision=revision or None).last_modified.date().isoformat()
             except Exception:
                 pass
-        return datetime.date.fromtimestamp(self.file("head.pt").stat().st_mtime).isoformat()
+        files = sorted((p.stat().st_mtime for p in Path(self.path).iterdir() if p.is_file()), reverse=True)
+        stamp = next((t for t in [self.file("head.pt").stat().st_mtime, *files] if t >= MTIME_FLOOR), None)
+        return "unknown" if stamp is None else datetime.datetime.fromtimestamp(stamp, datetime.timezone.utc).date().isoformat()
 
     def hybrid_base(self):
         """Whether the backbone has Gated DeltaNet layers (Qwen3.5), read from a config without loading weights: the base's

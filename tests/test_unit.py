@@ -2434,12 +2434,71 @@ def test_release_assets_are_deterministic_and_refuse_placeholders_and_wrong_hash
     staged = stage(asset, tmp_path / "w1", root, download(payload))
     assert sorted(p.name for p in staged.iterdir()) == ["README.md", "adapter_model.safetensors", "head.pt", "locked_test.json"]
     assert (staged / "README.md").read_text(encoding="utf-8") == "Validated context: 16,384 tokens\n"
-    first = deterministic_tar(staged, tmp_path / "a.tar.gz")
+    first = deterministic_tar(staged, tmp_path / "a.tar.gz", 1790812800)
     os.utime(staged / "head.pt", (1, 1))
     again = stage(asset, tmp_path / "w2", root, download(payload))
-    assert deterministic_tar(again, tmp_path / "b.tar.gz") == first
+    assert deterministic_tar(again, tmp_path / "b.tar.gz", 1790812800) == first
     with tarfile.open(tmp_path / "a.tar.gz") as tar:
         assert tar.getnames() == ["kev-x", "kev-x/README.md", "kev-x/adapter_model.safetensors", "kev-x/head.pt", "kev-x/locked_test.json"]
-        assert {m.mtime for m in tar.getmembers()} == {0}
+        assert {m.mtime for m in tar.getmembers()} == {1790812800}
     sums = write_sums({"b.tar.gz": "2" * 64, "a.tar.gz": first}, tmp_path)
     assert sums.read_text(encoding="utf-8") == f"{first}  a.tar.gz\n{'2' * 64}  b.tar.gz\n"
+
+
+def test_release_assets_carry_the_release_date(tmp_path):
+    """scripts/build_release_assets.py stamps every member and the gzip header with midnight UTC of the spec's
+    release_date (SOURCE_DATE_EPOCH wins when set), the date is the only thing besides names and contents the bytes depend
+    on, and the extracted checkpoint serves that date (Kev 1.0's first tarballs used mtime 0: /v1/models said 1969-12-31)."""
+    import os, tarfile
+    from kev.checkpoint import Checkpoint, Meta, write_meta
+    from scripts.build_release_assets import deterministic_tar, source_date_epoch
+    day = source_date_epoch({"release_date": "2026-10-01"}, env={})
+    assert day == 1790812800                                                   # 2026-10-01T00:00:00Z
+    assert source_date_epoch({"release_date": "2026-10-01"}, env={"SOURCE_DATE_EPOCH": "1700000000"}) == 1700000000
+    src = tmp_path / "kev-x"; src.mkdir()
+    write_meta(src, Meta(base="b"))
+    (src / "adapter_model.safetensors").write_bytes(b"adapter")
+    first = deterministic_tar(src, tmp_path / "a.tar.gz", day)
+    os.utime(src / "head.pt", (5, 5))
+    assert deterministic_tar(src, tmp_path / "b.tar.gz", day) == first
+    assert deterministic_tar(src, tmp_path / "c.tar.gz", day + 86400) != first
+    assert int.from_bytes((tmp_path / "a.tar.gz").read_bytes()[4:8], "little") == day   # gzip header MTIME (RFC 1952)
+    with tarfile.open(tmp_path / "a.tar.gz") as tar:
+        assert {m.mtime for m in tar.getmembers()} == {day}
+        tar.extractall(tmp_path / "x", filter="data")
+    assert Checkpoint(tmp_path / "x" / "kev-x").release_date() == "2026-10-01"
+
+
+def test_release_date_skips_zeroed_mtimes_and_uses_utc(tmp_path, monkeypatch):
+    """Checkpoint.release_date for a local run: head.pt's UTC date when it is a real time; a pre-2000 head.pt (a zeroed
+    archive mtime) falls back to the newest real file time, and to "unknown" (a non-empty string the TypeSafe card
+    accepts) when there is none. A Hub id still reports the Hub commit date and only reads files when the Hub is down."""
+    import datetime, os, time
+    from types import SimpleNamespace
+    import huggingface_hub
+    from kev.checkpoint import Checkpoint, Meta, write_meta
+    write_meta(tmp_path, Meta(base="b"))
+    (tmp_path / "adapter_model.safetensors").write_bytes(b"adapter")
+    late = 1790895599                                                          # 2026-10-01T23:59:59Z
+    os.utime(tmp_path / "head.pt", (late, late)); os.utime(tmp_path / "adapter_model.safetensors", (0, 0))
+    ck = Checkpoint(tmp_path)
+    monkeypatch.setenv("TZ", "Asia/Tokyo"); time.tzset()                      # UTC+9: the local date is 2026-10-02
+    try:
+        assert ck.release_date() == "2026-10-01"
+    finally:
+        monkeypatch.undo(); time.tzset()
+    os.utime(tmp_path / "head.pt", (0, 0)); os.utime(tmp_path / "adapter_model.safetensors", (1790812800 - 86400, 1790812800 - 86400))
+    assert ck.release_date() == "2026-09-30"
+    os.utime(tmp_path / "adapter_model.safetensors", (0, 0))
+    assert ck.release_date() == "unknown"
+
+    calls = []
+    def model_info(repo, revision=None):
+        calls.append((repo, revision))
+        if repo == "down/kev": raise OSError("offline")
+        return SimpleNamespace(last_modified=datetime.datetime(2026, 9, 29, 12, tzinfo=datetime.timezone.utc))
+    monkeypatch.setattr(huggingface_hub, "HfApi", lambda: SimpleNamespace(model_info=model_info))
+    ck.requested = "jaredpalmer/kev-x@v1.0"
+    assert ck.release_date() == "2026-09-29" and calls == [("jaredpalmer/kev-x", "v1.0")]
+    ck.requested = "down/kev"
+    assert ck.release_date() == "unknown"                                      # offline: the cached files' rule

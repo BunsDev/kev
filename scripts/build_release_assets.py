@@ -9,15 +9,20 @@ checkpoints (Kev-27B, 51 GB) are not assets: GitHub caps an asset at 2 GB, so th
     uv run python scripts/build_release_assets.py --release docs/releases/kev-1.0-assets.json --out /tmp/kev-1.0-assets
     uv run python scripts/build_release_assets.py --release docs/releases/kev-1.0-assets.json --out /tmp/x --dry-run
 
-The spec lists, per asset, `name` (tarball stem), `repo`, `revision` (full or short commit), `card`, `locked`, and the
-`expect` sha256 of `adapter_model.safetensors` and `head.pt`; a downloaded file that does not hash to `expect` is refused,
-and so is a card that still holds a `{{PLACEHOLDER}}`. The tarballs are deterministic (sorted members, mtime 0, uid/gid 0,
-gzip mtime 0), so rebuilding from the same inputs gives the same SHA256SUMS.txt. Needs network for the Hub download;
+The spec has the release's `release_date` (YYYY-MM-DD) and lists, per asset, `name` (tarball stem), `repo`, `revision`
+(full or short commit), `card`, `locked`, and the `expect` sha256 of `adapter_model.safetensors` and `head.pt`; a
+downloaded file that does not hash to `expect` is refused, and so is a card that still holds a `{{PLACEHOLDER}}`. The
+tarballs are deterministic (sorted members, uid/gid 0, every member's mtime and the gzip header's set to one time), so
+rebuilding from the same inputs gives the same SHA256SUMS.txt. That time is SOURCE_DATE_EPOCH when it is set (the
+reproducible-builds.org convention), else midnight UTC of `release_date`: an extracted checkpoint's files then carry the
+release date, which `kev.serve` reports in `/v1/models` (Checkpoint.release_date). Needs network for the Hub download;
 `--dry-run` checks the spec and the local files only.
 """
 import argparse
+import datetime
 import gzip
 import io
+import os
 import re
 import shutil
 import sys
@@ -37,13 +42,22 @@ def card_problems(text):
     return sorted(set(PLACEHOLDER.findall(text)))
 
 
-def deterministic_tar(src_dir, out_path):
-    """Write src_dir as <src_dir.name>/... into a gzip tarball whose bytes depend only on file names and contents."""
+def source_date_epoch(spec, env=os.environ):
+    """The mtime of every member and of the gzip header: SOURCE_DATE_EPOCH if set, else midnight UTC of the spec's
+    release_date. (Kev 1.0's first tarballs used 0, which extracts as 1969-12-31 or 1970-01-01.)"""
+    if env.get("SOURCE_DATE_EPOCH"): return int(env["SOURCE_DATE_EPOCH"])
+    midnight = datetime.datetime.combine(datetime.date.fromisoformat(spec["release_date"]), datetime.time(), datetime.timezone.utc)
+    return int(midnight.timestamp())
+
+
+def deterministic_tar(src_dir, out_path, mtime):
+    """Write src_dir as <src_dir.name>/... into a gzip tarball whose bytes depend only on file names, contents and
+    `mtime` (an int, seconds since the epoch)."""
     src_dir, buf = Path(src_dir), io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w", format=tarfile.PAX_FORMAT) as tar:
         def add(path, arcname):
             info = tar.gettarinfo(str(path), arcname)
-            info.mtime, info.uid, info.gid, info.uname, info.gname = 0, 0, 0, "", ""
+            info.mtime, info.uid, info.gid, info.uname, info.gname = mtime, 0, 0, "", ""
             info.mode = 0o755 if path.is_dir() else 0o644
             if path.is_dir(): tar.addfile(info)
             else:
@@ -51,7 +65,7 @@ def deterministic_tar(src_dir, out_path):
         add(src_dir, src_dir.name)
         for path in sorted(p for p in src_dir.rglob("*")):
             add(path, f"{src_dir.name}/{path.relative_to(src_dir).as_posix()}")
-    with Path(out_path).open("wb") as raw, gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as gz:
+    with Path(out_path).open("wb") as raw, gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=mtime) as gz:
         gz.write(buf.getvalue())
     return digest(out_path)
 
@@ -106,19 +120,22 @@ def main():
     a = ap.parse_args()
     spec = read_json(Path(a.release))
     problems = [p for asset in spec["assets"] for p in check_asset(asset)]
+    if "release_date" not in spec: problems.insert(0, "spec: missing release_date")
     if problems:
         for p in problems: print(f"REFUSED {p}")
         raise SystemExit(1)
+    mtime = source_date_epoch(spec)
     if a.dry_run:
         for asset in spec["assets"]: print(f"ok {asset['name']}: {asset['repo']}@{asset['revision']}")
+        print(f"ok mtime {mtime} ({datetime.datetime.fromtimestamp(mtime, datetime.timezone.utc).isoformat()})")
         return
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     work = out / ".stage"; work.mkdir(exist_ok=True)
-    sums, manifest = {}, {"release": spec["release"], "assets": []}
+    sums, manifest = {}, {"release": spec["release"], "source_date_epoch": mtime, "assets": []}
     for asset in spec["assets"]:
         staged = stage(asset, work)
         tarball = out / f"{asset['name']}.tar.gz"
-        sums[tarball.name] = deterministic_tar(staged, tarball)
+        sums[tarball.name] = deterministic_tar(staged, tarball, mtime)
         manifest["assets"].append({"file": tarball.name, "sha256": sums[tarball.name], "repo": asset["repo"],
                                    "revision": asset["revision"], "files": {p.name: digest(p) for p in sorted(staged.iterdir())}})
         print(f"{tarball.name} {sums[tarball.name]}")

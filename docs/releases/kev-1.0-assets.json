@@ -1,5 +1,6 @@
 {
   "release": "kev-1.0",
+  "release_date": "2026-10-01",
   "note": "GitHub release kev-1.0 assets (scripts/build_release_assets.py; docs/releases/kev-1.0.md). One tarball per adapter checkpoint at the exact Hub revision of its weights, with the Kev 1.0 card as README.md and the locked-test read. Kev-27B (full weights, 51 GB) is Hub-only: jaredpalmer/kev-27b, weights commit 28be62e9c5ae0471bda2b7c636a55224b4f4b887, head.pt 7968f17b03479c1ef9d1c0f3ab8a15e31ecb441cf40691b07ee945ab554d45ad.",
   "assets": [
     {
