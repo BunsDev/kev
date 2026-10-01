@@ -568,3 +568,66 @@ runs/r27c-9b-*-docs2/rows.json
 !runs/drift-v1/REPORT.md
 !runs/drift-v1/*/
 !runs/drift-v1/*/*.json
+# rounds 28 and 29 (experiments/rounds/r28.json, r29.json; phase A of the development-read sweep): the read-outs, their
+# private-rows manifests; every public-suite read's report + rows (breadth-v1, hard-v1, devtools-v1, transfer-r3); the
+# ood-v2 reads' reports (aggregates only); the existing reads the read-outs name that were not yet in git. Private
+# (jaredpalmer/kev-private-train runs/r28/, runs/r29/, scripts/private_rows.py restore): every tasksource-heldout-v1 read
+# (rows and report name the private families) and the ood-v2 rows.
+!runs/r28-readout/
+!runs/r28-readout/*
+!runs/r29-phase-a/
+!runs/r29-phase-a/*
+!runs/r28-*/
+!runs/r29-*/
+!runs/r28-*/rows.json
+!runs/r29-*/rows.json
+runs/r28-*/predictions.jsonl
+runs/r29-*/predictions.jsonl
+runs/r28-*-tsheld/
+runs/r29-*-tsheld/
+runs/r28-*-ood/rows.json
+runs/r29-*-ood/rows.json
+!runs/fam-4b-breadth/rows.json
+!runs/fam-08b-breadth/rows.json
+!runs/fam-9b-breadth/rows.json
+!runs/fam-9bnew-breadth/rows.json
+!runs/r10-4b-skills-*/rows.json
+!runs/r15-08b-a-*/rows.json
+!runs/r7-9b-s*-*/rows.json
+!runs/r9-9b-*-*/rows.json
+!runs/r11-9b-s*-*/rows.json
+!runs/r16-9b-r10k-*/rows.json
+runs/fam-*/predictions.jsonl
+# the trials these read-outs serve: provenance, in-trial transfer rows (the transfer4 panel; excluded from the temperature
+# pool) and, for round 28's parents, the development rows their shipped T is fitted on (decision-v7, public)
+!runs/r10-skills/00-trial-0/provenance.json
+!runs/r15-08b/00-trial-0/provenance.json
+!runs/r10-skills/00-trial-0/development/
+runs/r10-skills/00-trial-0/development/*
+!runs/r10-skills/00-trial-0/development/rows.json
+!runs/r10-skills/*-trial-*/transfer/
+!runs/r15-08b/*-trial-*/transfer/
+!runs/r7-docs/*-trial-*/transfer/
+!runs/r9-docs/*-trial-*/transfer/
+!runs/r11-docs/*-trial-*/transfer/
+!runs/r16-9b/*-trial-*/transfer/
+!runs/r18-9b/*-trial-*/transfer/
+runs/r10-skills/*-trial-*/transfer/*
+runs/r15-08b/*-trial-*/transfer/*
+runs/r7-docs/*-trial-*/transfer/*
+runs/r9-docs/*-trial-*/transfer/*
+runs/r11-docs/*-trial-*/transfer/*
+runs/r16-9b/*-trial-*/transfer/*
+runs/r18-9b/*-trial-*/transfer/*
+!runs/r10-skills/*-trial-*/transfer/rows.json
+!runs/r15-08b/*-trial-*/transfer/rows.json
+!runs/r7-docs/*-trial-*/transfer/rows.json
+!runs/r9-docs/*-trial-*/transfer/rows.json
+!runs/r11-docs/*-trial-*/transfer/rows.json
+!runs/r16-9b/*-trial-*/transfer/rows.json
+!runs/r18-9b/*-trial-*/transfer/rows.json
+!runs/r7-docs/*-trial-*/provenance.json
+!runs/r9-docs/*-trial-*/provenance.json
+!runs/r11-docs/*-trial-*/provenance.json
+!runs/r16-9b/*-trial-*/provenance.json
+!runs/r18-9b/*-trial-*/provenance.json

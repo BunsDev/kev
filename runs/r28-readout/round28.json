@@ -1,0 +1,634 @@
+{
+  "round": 28,
+  "registered": "PLAN.md > Round 28 - the small family's shipped temperatures refitted on the held-out-datasets pool (Kev-4B round 10, Kev-0.8B round 15; post hoc, no training) and a registered validated-context-length rule per size; registered with this spec's commit, before any round-28 read",
+  "drop_ids": [
+    "codereviewer/cls-test/13657",
+    "codereviewer/cls-test/19245"
+  ],
+  "arms": {
+    "4b-r10": {
+      "trial": "runs/r10-skills/00-trial-0",
+      "parent": "runs/r10-skills/00-trial-0",
+      "temperature": 2.2973967099940698,
+      "parent_temperature": 2.406050072164233,
+      "panels": {
+        "calibration_primary": {
+          "n": 4468,
+          "excluded": 1395,
+          "ece": {
+            "candidate": 0.025153435815074995,
+            "parent": 0.02399500785265473,
+            "delta": 0.0011584279624202096,
+            "ci95": [
+              -0.004211598228539168,
+              0.0066899490431712935
+            ]
+          },
+          "brier": {
+            "candidate": 0.36816967906778425,
+            "parent": 0.368251118217798,
+            "delta": -8.143915001379565e-05,
+            "ci95": [
+              -0.00045481682066248754,
+              0.00030258574745754266
+            ]
+          },
+          "acc": {
+            "candidate": 0.7273948075201433,
+            "parent": 0.7273948075201433
+          }
+        },
+        "breadth": {
+          "n": 2475,
+          "excluded": 600,
+          "ece": {
+            "candidate": 0.01958756494848796,
+            "parent": 0.020555762090059486,
+            "delta": -0.0009681971415715362,
+            "ci95": [
+              -0.00821057989109606,
+              0.008008709109514022
+            ]
+          },
+          "acc": {
+            "candidate": 0.7676767676767676,
+            "parent": 0.7676767676767676
+          },
+          "brier": {
+            "candidate": 0.3195690098392925,
+            "parent": 0.31986904092927215
+          }
+        },
+        "tasksource_heldout": {
+          "n": 1993,
+          "excluded": 795,
+          "ece": {
+            "candidate": 0.04440124410940084,
+            "parent": 0.04160219286984482,
+            "delta": 0.0027990512395560316,
+            "ci95": [
+              -0.008397403530124945,
+              0.009479509345998897
+            ]
+          },
+          "acc": {
+            "candidate": 0.6773707977922729,
+            "parent": 0.6773707977922729
+          },
+          "brier": {
+            "candidate": 0.428524248230111,
+            "parent": 0.42833422975272095
+          }
+        },
+        "transfer4": {
+          "n": 576,
+          "excluded": 80,
+          "ece": {
+            "candidate": 0.03990012442459521,
+            "parent": 0.044179314175974996,
+            "delta": -0.004279189751379857,
+            "ci95": [
+              -0.012621209817372402,
+              0.01153032739990138
+            ]
+          },
+          "acc": {
+            "candidate": 0.8541666666666666,
+            "parent": 0.8541666666666666
+          },
+          "brier": {
+            "candidate": 0.19951078709457384,
+            "parent": 0.20009270195139878
+          }
+        },
+        "hard": {
+          "n": 1083,
+          "ece": {
+            "candidate": 0.08552428131056236,
+            "parent": 0.09532817788644253,
+            "delta": -0.009803896575880044,
+            "ci95": [
+              -0.011079295066866536,
+              -0.006931233845508048
+            ]
+          },
+          "acc": {
+            "candidate": 0.7857802400738689,
+            "parent": 0.7857802400738689
+          },
+          "brier": {
+            "candidate": 0.3079124603025023,
+            "parent": 0.3110477469084962
+          }
+        },
+        "devtools": {
+          "n": 772,
+          "excluded": 300,
+          "ece": {
+            "candidate": 0.06570140840745944,
+            "parent": 0.07193015401557686,
+            "delta": -0.006228745608117453,
+            "ci95": [
+              -0.01421516712495033,
+              0.0073441396883266175
+            ]
+          },
+          "acc": {
+            "candidate": 0.7797927461139896,
+            "parent": 0.7797927461139896
+          },
+          "brier": {
+            "candidate": 0.29163422272694933,
+            "parent": 0.29410284995118596
+          }
+        },
+        "docs": {
+          "n": 920,
+          "ece": {
+            "candidate": 0.07916512867877237,
+            "parent": 0.09256405760879499,
+            "delta": -0.013398928930022633,
+            "ci95": [
+              -0.015774447140064783,
+              -0.005038438989187738
+            ]
+          },
+          "acc": {
+            "candidate": 0.8913043478260869,
+            "parent": 0.8913043478260869
+          },
+          "brier": {
+            "candidate": 0.1699986385682664,
+            "parent": 0.17337828002348754
+          }
+        },
+        "breadth_index": {
+          "n": 3075,
+          "ece": {
+            "candidate": 0.02744499592827091,
+            "parent": 0.027671159407392395,
+            "delta": -0.00022616347912152862,
+            "ci95": [
+              -0.005235335232045371,
+              0.006807995798469288
+            ]
+          },
+          "brier": {
+            "candidate": 0.3911379049947098,
+            "parent": 0.39093525617066627,
+            "delta": 0.00020264882404352758,
+            "ci95": [
+              -0.0002189975905605046,
+              0.0006525633629807735
+            ]
+          },
+          "acc": {
+            "candidate": 0.6956097560975609,
+            "parent": 0.6956097560975609
+          }
+        },
+        "tasksource_heldout_all_families": {
+          "n": 2788,
+          "ece": {
+            "candidate": 0.09995803291784408,
+            "parent": 0.09661271955070637,
+            "delta": 0.0033453133671376284,
+            "ci95": [
+              -0.0026574715338504883,
+              0.007899511799498443
+            ]
+          },
+          "brier": {
+            "candidate": 0.5001015567000386,
+            "parent": 0.497908228232303,
+            "delta": 0.002193328467735456,
+            "ci95": [
+              0.0016921323049168852,
+              0.0027017880200789603
+            ]
+          },
+          "acc": {
+            "candidate": 0.6323529411764706,
+            "parent": 0.6323529411764706
+          }
+        },
+        "ood": {
+          "n": 4988,
+          "acc": {
+            "candidate": 0.8642742582197274,
+            "parent": 0.8642742582197274,
+            "delta": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "ece": {
+            "candidate": 0.07475748973308279,
+            "parent": 0.08431279762893233,
+            "delta": -0.009555307895849394,
+            "ci95": [
+              -0.009780263125284743,
+              -0.009266804298994959
+            ]
+          }
+        }
+      },
+      "missing": [],
+      "temperature_fit": {
+        "reads": [
+          "runs/r28-4b-r10-r3cal",
+          "runs/r10-4b-skills-v9"
+        ],
+        "sources": {
+          "runs/r10-4b-skills-v9": [
+            "mmlu_pro"
+          ],
+          "runs/r28-4b-r10-r3cal": [
+            "composition_holdout",
+            "emotion",
+            "legacy_holdout",
+            "mmlu",
+            "paws",
+            "qnli",
+            "sciq",
+            "tweet_offensive"
+          ]
+        },
+        "exclude_reads": [
+          "runs/r10-skills/00-trial-0/transfer"
+        ],
+        "questions": 648,
+        "excluded_questions": 0
+      },
+      "temperature_ci": {
+        "level": 0.9,
+        "samples": 2000,
+        "seed": 0,
+        "lower": 2.04674778399355,
+        "upper": 2.5198420997897464,
+        "questions": 648,
+        "resampled": "(source, group) clusters within each source (kev.metrics.cluster_resamples)"
+      },
+      "temperature_source": {
+        "kind": "pool",
+        "reads": [
+          "runs/r28-4b-r10-r3cal",
+          "runs/r10-4b-skills-v9"
+        ],
+        "questions": 648
+      },
+      "parent_temperature_source": {
+        "kind": "trial development rows",
+        "rows": "runs/r10-skills/00-trial-0/development",
+        "suite": "evals/v7/decision-v7",
+        "training_corpus": true,
+        "shipped": 2.406050072164233
+      },
+      "missing_optional": [
+        "candidate:runs/r28-4b-r10-longdoc",
+        "parent:runs/r28-4b-r10-longdoc",
+        "candidate:runs/r28-4b-r10-longdoc",
+        "parent:runs/r28-4b-r10-longdoc",
+        "candidate:runs/r28-4b-r10-longdoc",
+        "parent:runs/r28-4b-r10-longdoc",
+        "candidate:runs/r28-4b-r10-agentsood",
+        "parent:runs/r28-4b-r10-agentsood",
+        "candidate:runs/r28-4b-r10-guardood",
+        "parent:runs/r28-4b-r10-guardood"
+      ],
+      "unknowable": {
+        "candidate": 0.0,
+        "parent": 0.0
+      },
+      "criteria": {
+        "1_primary_brier_upper_below_0": false,
+        "1_primary_ece_below_shipped": false,
+        "2_breadth_ece_at_most_shipped_plus_0.005": true,
+        "2_tasksource_heldout_ece_at_most_shipped_plus_0.005": true,
+        "2_transfer4_ece_at_most_shipped_plus_0.005": true,
+        "2_hard_ece_at_most_shipped_plus_0.005": true,
+        "2_devtools_ece_at_most_shipped_plus_0.005": true,
+        "2_docs_ece_at_most_shipped_plus_0.005": true
+      },
+      "complete": true,
+      "passed": false
+    },
+    "08b-r15": {
+      "trial": "runs/r15-08b/00-trial-0",
+      "parent": "runs/r15-08b/00-trial-0",
+      "temperature": 2.5198420997897464,
+      "parent_temperature": 2.3510958125672174,
+      "panels": {
+        "calibration_primary": {
+          "n": 4468,
+          "excluded": 1395,
+          "ece": {
+            "candidate": 0.037484285612675014,
+            "parent": 0.04840780208688905,
+            "delta": -0.010923516474214016,
+            "ci95": [
+              -0.012753781406016266,
+              -0.004941915302055137
+            ]
+          },
+          "brier": {
+            "candidate": 0.5029674720433829,
+            "parent": 0.5049251386526404,
+            "delta": -0.001957666609257558,
+            "ci95": [
+              -0.0025333061563848234,
+              -0.00139175764155719
+            ]
+          },
+          "acc": {
+            "candidate": 0.5915398388540735,
+            "parent": 0.5915398388540735
+          }
+        },
+        "breadth": {
+          "n": 2475,
+          "excluded": 600,
+          "ece": {
+            "candidate": 0.023145117175840998,
+            "parent": 0.021954101052026078,
+            "delta": 0.0011910161238149267,
+            "ci95": [
+              -0.008941429420899856,
+              0.013053930193900283
+            ]
+          },
+          "acc": {
+            "candidate": 0.6533333333333333,
+            "parent": 0.6533333333333333
+          },
+          "brier": {
+            "candidate": 0.44208834585142226,
+            "parent": 0.4421708022806719
+          }
+        },
+        "tasksource_heldout": {
+          "n": 1993,
+          "excluded": 795,
+          "ece": {
+            "candidate": 0.08813410148078095,
+            "parent": 0.09564621172254753,
+            "delta": -0.007512110241766581,
+            "ci95": [
+              -0.011432597968144411,
+              -0.0018115899253147892
+            ]
+          },
+          "acc": {
+            "candidate": 0.5148018063221275,
+            "parent": 0.5148018063221275
+          },
+          "brier": {
+            "candidate": 0.578569999552215,
+            "parent": 0.5828563892901828
+          }
+        },
+        "transfer4": {
+          "n": 576,
+          "excluded": 80,
+          "ece": {
+            "candidate": 0.04348657912380668,
+            "parent": 0.05791012593550067,
+            "delta": -0.014423546811693999,
+            "ci95": [
+              -0.026075209833767033,
+              0.01075958595564275
+            ]
+          },
+          "acc": {
+            "candidate": 0.6684027777777778,
+            "parent": 0.6684027777777778
+          },
+          "brier": {
+            "candidate": 0.404191054085639,
+            "parent": 0.4040753527200655
+          }
+        },
+        "hard": {
+          "n": 1083,
+          "ece": {
+            "candidate": 0.12387222011686691,
+            "parent": 0.11247267845826384,
+            "delta": 0.011399541658603088,
+            "ci95": [
+              0.004498887344821037,
+              0.013785558656180032
+            ]
+          },
+          "acc": {
+            "candidate": 0.5937211449676824,
+            "parent": 0.5937211449676824
+          },
+          "brier": {
+            "candidate": 0.5365818231132033,
+            "parent": 0.5308690550944167
+          }
+        },
+        "devtools": {
+          "n": 772,
+          "excluded": 300,
+          "ece": {
+            "candidate": 0.09949047150286656,
+            "parent": 0.0923349717073413,
+            "delta": 0.007155499795525239,
+            "ci95": [
+              -0.006033683584112436,
+              0.015501960621428806
+            ]
+          },
+          "acc": {
+            "candidate": 0.633419689119171,
+            "parent": 0.633419689119171
+          },
+          "brier": {
+            "candidate": 0.41616728119339336,
+            "parent": 0.41428547325049064
+          }
+        },
+        "docs": {
+          "n": 920,
+          "ece": {
+            "candidate": 0.07837428216268377,
+            "parent": 0.05864539840284509,
+            "delta": 0.019728883759838736,
+            "ci95": [
+              0.007748101003242313,
+              0.021499365114356666
+            ]
+          },
+          "acc": {
+            "candidate": 0.842391304347826,
+            "parent": 0.842391304347826
+          },
+          "brier": {
+            "candidate": 0.23992656785795763,
+            "parent": 0.23588671772306943
+          }
+        },
+        "breadth_index": {
+          "n": 3075,
+          "ece": {
+            "candidate": 0.02654902182305905,
+            "parent": 0.031762743672741664,
+            "delta": -0.005213721849682627,
+            "ci95": [
+              -0.00973213972568673,
+              0.007079645612018557
+            ]
+          },
+          "brier": {
+            "candidate": 0.4906218651265098,
+            "parent": 0.491362078856058,
+            "delta": -0.0007402137295480782,
+            "ci95": [
+              -0.0014206433143932995,
+              -0.00012207092522817126
+            ]
+          },
+          "acc": {
+            "candidate": 0.5970731707317073,
+            "parent": 0.5970731707317073
+          }
+        },
+        "tasksource_heldout_all_families": {
+          "n": 2788,
+          "ece": {
+            "candidate": 0.10763301937580474,
+            "parent": 0.11626342304765883,
+            "delta": -0.008630403671854026,
+            "ci95": [
+              -0.011487356157998284,
+              -0.004467405476654873
+            ]
+          },
+          "brier": {
+            "candidate": 0.5898396926635014,
+            "parent": 0.59545207305187,
+            "delta": -0.005612380388368532,
+            "ci95": [
+              -0.006397469703639946,
+              -0.004785675016966001
+            ]
+          },
+          "acc": {
+            "candidate": 0.513271162123386,
+            "parent": 0.513271162123386
+          }
+        },
+        "ood": {
+          "n": 4988,
+          "acc": {
+            "candidate": 0.6607858861267041,
+            "parent": 0.6607858861267041,
+            "delta": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "ece": {
+            "candidate": 0.13612730217828162,
+            "parent": 0.12274666015682036,
+            "delta": 0.013380642021461261,
+            "ci95": [
+              0.012923146007429614,
+              0.013659854124709886
+            ]
+          }
+        }
+      },
+      "missing": [],
+      "temperature_fit": {
+        "reads": [
+          "runs/r28-08b-r15-r3cal",
+          "runs/r15-08b-a-v9"
+        ],
+        "sources": {
+          "runs/r15-08b-a-v9": [
+            "mmlu_pro"
+          ],
+          "runs/r28-08b-r15-r3cal": [
+            "composition_holdout",
+            "emotion",
+            "legacy_holdout",
+            "mmlu",
+            "paws",
+            "qnli",
+            "sciq",
+            "tweet_offensive"
+          ]
+        },
+        "exclude_reads": [
+          "runs/r15-08b/00-trial-0/transfer"
+        ],
+        "questions": 648,
+        "excluded_questions": 0
+      },
+      "temperature_ci": {
+        "level": 0.9,
+        "samples": 2000,
+        "seed": 0,
+        "lower": 2.193649959389252,
+        "upper": 2.82842712474619,
+        "questions": 648,
+        "resampled": "(source, group) clusters within each source (kev.metrics.cluster_resamples)"
+      },
+      "temperature_source": {
+        "kind": "pool",
+        "reads": [
+          "runs/r28-08b-r15-r3cal",
+          "runs/r15-08b-a-v9"
+        ],
+        "questions": 648
+      },
+      "parent_temperature_source": {
+        "kind": "trial development rows",
+        "rows": "runs/r15-08b/00-trial-0/development",
+        "suite": "evals/v7/decision-v7",
+        "training_corpus": true,
+        "shipped": 2.3510958125672174
+      },
+      "missing_optional": [
+        "candidate:runs/r28-08b-r15-longdoc",
+        "parent:runs/r28-08b-r15-longdoc",
+        "candidate:runs/r28-08b-r15-longdoc",
+        "parent:runs/r28-08b-r15-longdoc",
+        "candidate:runs/r28-08b-r15-longdoc",
+        "parent:runs/r28-08b-r15-longdoc",
+        "candidate:runs/r28-08b-r15-agentsood",
+        "parent:runs/r28-08b-r15-agentsood",
+        "candidate:runs/r28-08b-r15-guardood",
+        "parent:runs/r28-08b-r15-guardood"
+      ],
+      "unknowable": {
+        "candidate": 0.0,
+        "parent": 0.0
+      },
+      "criteria": {
+        "1_primary_brier_upper_below_0": true,
+        "1_primary_ece_below_shipped": true,
+        "2_breadth_ece_at_most_shipped_plus_0.005": true,
+        "2_tasksource_heldout_ece_at_most_shipped_plus_0.005": true,
+        "2_transfer4_ece_at_most_shipped_plus_0.005": true,
+        "2_hard_ece_at_most_shipped_plus_0.005": false,
+        "2_devtools_ece_at_most_shipped_plus_0.005": false,
+        "2_docs_ece_at_most_shipped_plus_0.005": false
+      },
+      "complete": true,
+      "passed": false
+    }
+  },
+  "ranking": {
+    "4b": [],
+    "08b": []
+  },
+  "candidates": {
+    "4b": null,
+    "08b": null
+  }
+}
