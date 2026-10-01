@@ -86,6 +86,9 @@ runs/*/*
 !runs/*/longstate.json
 !runs/r4-*longstate*/rows.json
 !runs/r4-*-ls/rows.json
+# MLX long-state serving reads (scripts/mlx_long_states.py): one report per size
+!runs/mlx-long-states/*.json
+!runs/mlx-long-states/summary.md
 # the soft-target Kev-9B release confirmation: every input scripts/release_confirm.py reads
 !runs/rc-*/rows.json
 !runs/*/*/

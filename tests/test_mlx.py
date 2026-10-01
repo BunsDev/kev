@@ -301,6 +301,69 @@ def test_prefix_reuse_and_question_isolation(models):
         m.probs_with_prefix(m.encode(tok, {**rec, "state": rec["state"] + " extra words here"}), prefix)
 
 
+def test_chunked_state_prefill_is_exact(tmp_path, monkeypatch):
+    """prefix() runs the state PREFILL_CHUNK tokens per pass into the prompt cache: each pass continues the cached
+    attention keys/values at the cache's rotary offset, the DeltaNet conv window (the last 3 inputs) and its fp32 recurrent
+    state, so chunking is exact up to float reassociation. On the fp32 random Qwen3.5 on the CPU (Metal's fp32 matmul is a
+    reduced-precision fast path), every chunk size, down to passes shorter than the conv window, gives the one-pass cache and
+    answers to 3e-5 (measured: cache 4e-6, probabilities 2e-6); a conv window lost at one boundary puts the cache 1.3 off. The Metal kernels on real bf16
+    checkpoints: test_chunked_state_prefill_serves_within_bf16_noise, runs/mlx-long-states/prefill-ab-*."""
+    import random
+    import kev.mlx_model as MM
+    from kev.data import materialize
+    ck = Checkpoint(save_full(tmp_path, dtype=torch.float32))
+    tok, m = ck.load("mps", LoadOptions(backend="mlx"))
+    rng = random.Random(0)
+    rec = materialize({**TINY_REC, "state": " ".join(rng.choice(WORDS) for _ in range(44))})
+    enc = m.encode(tok, rec)
+    Ls = enc["seg"].count(0)
+    flat = lambda cache: [np.asarray(x) for c in cache for x in c.state]   # keys and values, conv and recurrent states
+    rel = lambda a, b: max(float(np.abs(x - y).max() / np.abs(y).max()) for x, y in zip(a, b))
+    mx.set_default_device(mx.cpu)
+    try:
+        one = m.prefix(enc)
+        want, want_p = flat(one[1]), m.probs_with_prefix(enc, one)
+        assert m.dtype == "float32" and Ls > 44 and max(float(p.max()) for p in want_p) > 0.9, "a flat head would pass any comparison"
+        for chunk in (1, 2, 3, 4, 7, 16, Ls - 1):
+            monkeypatch.setattr(MM, "PREFILL_CHUNK", chunk)
+            n, cache = m.prefix(enc)
+            assert n == Ls and {c.offset for c in cache if hasattr(c, "offset")} == {Ls}
+            assert rel(flat(cache), want) < 3e-5, chunk
+            assert max(float((p - q).abs().max()) for p, q in zip(m.probs_with_prefix(enc, (n, cache)), want_p)) < 3e-5, chunk
+        cache = MM.make_prompt_cache(m.lm)   # the fault the comparison must catch: the conv window dropped at a boundary
+        m.text(mx.array([enc["ids"][:20]], dtype=mx.int32), cache=cache)
+        for c in cache:
+            if not hasattr(c, "offset"): c[0] = mx.zeros_like(c[0])
+        m.text(mx.array([enc["ids"][20:Ls]], dtype=mx.int32), cache=cache)
+        assert rel(flat(cache), want) > 0.1
+    finally:
+        mx.set_default_device(mx.gpu)
+
+
+def test_chunked_state_prefill_serves_within_bf16_noise(models, monkeypatch):
+    """The served chunk on real states longer than it (the three longest hard-v1 long_policy development records, 4.6k-4.9k
+    tokens: five 1,024-token passes, the last one partial) keeps the answers within the MLX-vs-torch serving bar of the
+    one-pass prefix and of the fp32 torch path. Chunked and one-pass bf16 differ only by rounding in kernels picked by
+    shape (fp32 on the CPU: 1e-6, test_chunked_state_prefill_is_exact): measured max |dp| 0.003-0.005 against one pass
+    (any chunk from 256 to 4,096 moves these states as much: runs/mlx-long-states/prefill-ab-0.8b.json) and 0.003-0.011
+    against fp32 torch (one pass: 0.004-0.012), no flip, one torch top-2 margin 0.019."""
+    import kev.mlx_model as MM
+    from kev.data import materialize
+    from kev.model import admit
+    from kev.suite import load_split
+    tok, m, ref, _ = models
+    long = sorted((r for r in load_split("evals/hard-v1", "development") if r["_meta"]["family"] == "long_policy"), key=lambda r: -r["_meta"]["state_tokens"])[:3]
+    for rec in map(materialize, long):
+        enc = admit(m, tok, rec)   # the serving context: encode's default cuts the state at the training length
+        Ls = enc["seg"].count(0)
+        assert Ls > 4 * MM.PREFILL_CHUNK and Ls % MM.PREFILL_CHUNK
+        chunked = m.probs(enc)
+        with monkeypatch.context() as one_pass:
+            one_pass.setattr(MM, "PREFILL_CHUNK", 10 ** 9); one = m.probs(enc)
+        near(chunked, one, bar=0.03, tie=0.02)
+        near(chunked, ref.probs(admit(ref, tok, rec)), bar=0.03, tie=0.02)
+
+
 def test_server_refuses_or_marks_over_length_states_on_mlx(models, monkeypatch):
     """kev.serve on the MLX backend admits like the torch one (kev.model.admit): with the state limit set just under a
     real record's state, the default server answers 422 before the model runs, and a truncating server reads exactly the

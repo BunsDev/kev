@@ -271,6 +271,34 @@ def test_prefix_cache_bounds_the_state_tokens_it_holds():
     assert list(c.entries.values()) == ["pd", "pe"]            # 12 would not: the least recently used goes
 
 
+def test_prefix_cache_makes_room_before_the_batch():
+    """kev.serve.PrefixCache.make_room (Server._run, between plan and the passes): the entries store() will evict are
+    dropped before the batch runs, so a new long state is not computed next to the one it replaces, and the cache after
+    store() is the one it would have been without make_room (random batches of hits, new states, uncacheable ones)."""
+    import random
+    from kev.serve import PrefixCache
+    enc = lambda state: {"ids": list(state) + [0] * 5, "seg": [0] * len(state) + [1] * 5}
+    c = PrefixCache(size=4, min_tokens=0, max_tokens=10)
+    c.store(*c.plan([enc("a" * 6)])[:2], ["pa"])
+    keys, cached, keep = c.plan([enc("b" * 6)])
+    c.make_room(keys, cached, keep)
+    assert c.entries == {}                                     # 6 + 6 tokens will not fit: a goes before b runs
+    c.store(keys, cached, ["pb"])
+    keys, cached, keep = c.plan([enc("b" * 6), enc("c" * 3)])
+    c.make_room(keys, cached, keep)
+    assert list(c.entries.values()) == ["pb"]                  # a hit stays; 6 + 3 fit
+    rng = random.Random(0)
+    for size, bound in ((2, 10), (3, 8), (4, 12)):
+        a, b = PrefixCache(size=size, min_tokens=2, max_tokens=bound), PrefixCache(size=size, min_tokens=2, max_tokens=bound)
+        for step in range(300):
+            batch = [enc(rng.choice("abcdef") * rng.randint(1, bound + 1)) for _ in range(rng.randint(1, 4))]
+            for cache, room in ((a, False), (b, True)):
+                keys, cached, keep = cache.plan(batch)
+                if room: cache.make_room(keys, cached, keep)
+                cache.store(keys, cached, [old if old is not None else (f"p{step}-{i}" if k else None) for i, (old, k) in enumerate(zip(cached, keep))])
+            assert list(a.entries.items()) == list(b.entries.items()) and (a.hits, a.misses) == (b.hits, b.misses), step
+
+
 def test_out_of_memory_drops_the_prefix_cache_and_retries_once():
     """kev.serve.Server._run: a pass out of device memory with states cached clears the cache and runs once more (#75: a
     full cache kept failing every later batch); a second failure fails the batch with the cache left empty, and an
@@ -313,6 +341,12 @@ def test_out_of_memory_drops_the_prefix_cache_and_retries_once():
         model.fail = None; s.probs(enc("abc")); model.fail, model.calls = "other", 0
         with pytest.raises(ValueError): s.probs(enc("abc"))
         assert model.calls == 1 and len(s.prefix_cache.entries) == 1
+        # make_room drops the batch's own hit "abc" before the pass (the batch's newer "xyz" takes the only slot), so the
+        # cache is empty when the pass fails, yet the pass holds that hit's state: it still retries, the hit as a miss
+        s.prefix_cache.size, model.fail, model.calls = 1, "cached", 0
+        with s.lock: out = s._run([enc("abc"), enc("xyz")])
+        assert model.calls == 2 and s.prefix_cache.oom_retries == 3 and [o[1]["prefix_cache_hit"] for o in out] == [False, False]
+        assert list(s.prefix_cache.entries) == [(tuple("xyz"), False)]
     finally:
         s.close()
     assert out_of_memory(RuntimeError("MPS backend out of memory (MPS allocated: 1 GB)")) and not out_of_memory(RuntimeError("shape mismatch"))

@@ -33,6 +33,7 @@ CACHE_LIMIT = 1 << 30   # MLX's buffer cache keeps a buffer per new request shap
 MLX_DTYPES = {"bfloat16": mx.bfloat16, "float32": mx.float32}   # config.json's dtype names (kev.checkpoint.Checkpoint.saved_dtype) -> MLX
 FULL_MODEL_TYPE = "qwen3_5_text"   # what save_pretrained of transformers' Qwen3_5TextModel writes (Qwen3.5 and Qwen3.8 alike)
 FULL_PREFIX = "language_model.model."   # the text backbone inside mlx-lm's qwen3_5.Model; a full checkpoint's names carry no prefix
+PREFILL_CHUNK = 1024    # state tokens per prefix pass (MLXDecisionModel.prefix); on an M5 1,024 / 2,048 / 4,096 / one pass take the same time, the peak grows with the chunk
 
 
 def load_base(base_dir):
@@ -178,9 +179,18 @@ class MLXDecisionModel:
     # (state once instead of once per question), so it is the only path `forward` / `probs` take.
 
     def prefix(self, enc):
+        """The state into a fresh prompt cache, PREFILL_CHUNK tokens per pass, each pass's cache evaluated before the next
+        (mlx-lm's own prefill does the same; the hidden states a pass returns are never read). One pass over the whole
+        state kept every layer's activations of every token alive at once and left the DeltaNet conv states lazy (each
+        holding its layer's whole [Ls, conv_dim] input): Kev-4B, 8,192 tokens, 4.6 GB above the weights instead of 1.2 GB,
+        the same 6.5 s. Exact: a pass continues the cached keys/values (rotary offset = cache offset), conv window and
+        fp32 recurrent state, so chunked and one-pass differ by float reassociation only (fp32 on the CPU: max |dp| 1e-6;
+        bf16 on Metal: up to ~0.01, like any change of kernel shapes; tests/test_mlx.py, runs/mlx-long-states/prefill-ab-*)."""
         Ls = enc["seg"].count(0)
-        cache = make_prompt_cache(self.lm)
-        self._hidden([enc["ids"][:Ls]], cache)
+        cache, ids = make_prompt_cache(self.lm), enc["ids"][:Ls]
+        for start in range(0, Ls, PREFILL_CHUNK):
+            self.text(mx.array([ids[start:start + PREFILL_CHUNK]], dtype=mx.int32), cache=cache)
+            mx.eval([c.state for c in cache])
         return Ls, cache
 
     def _branch_logits(self, enc, cache):
