@@ -584,6 +584,8 @@ runs/r27c-9b-*-docs2/rows.json
 !runs/r29-*/
 !runs/r28-*/rows.json
 !runs/r29-*/rows.json
+# round 28's validated context read-out (PLAN.md > Round 28 (registered) > validated context length): longdoc_report.py's report.md too
+!runs/r28-context*/report.md
 runs/r28-*/predictions.jsonl
 runs/r29-*/predictions.jsonl
 runs/r28-*-tsheld/

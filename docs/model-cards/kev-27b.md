@@ -93,10 +93,11 @@ Kev-27B is a decision model. It reads one document (the *state*) and a set of ty
 | Parameters | 25.6B in the backbone (vision tower, LM head and multi-token-prediction layers are not loaded), 2.6M in the head |
 | Precision | bf16 (a 51.3 GB checkpoint); served in bf16 |
 | Context | States of up to 65,536 tokens are served, plus at least 8,192 tokens per question. Training states were at most 32,768 tokens. |
+| Validated context length | 65,536 tokens (see Long documents) |
 | Calibration | One temperature, T = 1.32, stored in `head.pt` and applied at load time |
 | Languages | English |
 | License | Apache-2.0 (weights and head); the base model is Apache-2.0 |
-| Version | v2, released 2026-09-30 on `main` of [`jaredpalmer/kev-27b`](https://huggingface.co/jaredpalmer/kev-27b) |
+| Version | v2 (Kev 1.0), released 2026-09-30 on `main` of [`jaredpalmer/kev-27b`](https://huggingface.co/jaredpalmer/kev-27b) |
 | Previous version | v1, a rank-16 LoRA adapter on the same base (T = 1.38), at tag [`v1-lora`](https://huggingface.co/jaredpalmer/kev-27b/tree/v1-lora); its card is the README at that tag |
 
 **Input.** A state (text, or a JSON object or array rendered as labelled text) and any number of named questions, each of one of three types:
@@ -228,6 +229,8 @@ Against v1 the index difference is +2.1 [−0.4, +4.6]. No paired interval again
 | all (2,194) | 0.874 / 0.053 | 0.890 / 0.007 |
 
 Accuracy difference over all lengths: −1.6 [−3.0, −0.3]. On the generated agreement bundles (2,400 questions) both models score 1.000.
+
+**Context length.** Validated context length: 65,536 tokens, the serving limit, from longdoc-v1 development (paired CUAD accuracy difference from the 8k bucket, pp [95 % CI]: 16k +0.2 [−0.7, +1.2], 32k −0.2 [−1.2, +0.7], 64k −1.1 [−2.4, +0.0]; 445–447 questions each). The rule is the one applied to every Kev 1.0 size: the validated length is the nominal size of the largest bucket from 16,384 tokens up such that it, and every bucket between it and 8,192, is within tolerance, meaning the CUAD accuracy difference from the 8k bucket, paired on the same contract, repeat and question, has a 95 % lower bound of at least −3 pp, with every record answered.
 
 **Calibration** (expected calibration error, ECE, as served; lower is better):
 

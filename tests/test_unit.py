@@ -2403,3 +2403,43 @@ def test_jev_counts_a_hosted_error_on_an_oversize_request_as_a_refusal(monkeypat
         j = P.JevPredictor("key", count_refusals=True, budget=100)
         with pytest.raises(raised): j(record)
         assert w.lines == lines and j.accounting()["refusals"] == refusals
+
+
+def test_release_assets_are_deterministic_and_refuse_placeholders_and_wrong_hashes(tmp_path):
+    """scripts/build_release_assets.py: a card with a {{PLACEHOLDER}} is refused before anything is downloaded; a staged
+    file whose sha256 differs from the spec is refused; the tarball is byte-identical when rebuilt from the same files
+    (mtime, owner and member order do not enter it), and SHA256SUMS.txt is in `shasum -a 256 -c` format."""
+    import hashlib, os, tarfile
+    from scripts.build_release_assets import card_problems, check_asset, deterministic_tar, stage, write_sums
+    root = tmp_path / "repo"; (root / "docs").mkdir(parents=True); (root / "runs").mkdir()
+    (root / "docs/card.md").write_text("Validated context: {{VALIDATED_CONTEXT_4B}}\n", encoding="utf-8")
+    (root / "runs/locked.json").write_text("{}", encoding="utf-8")
+    payload = b"adapter bytes"
+    asset = {"name": "kev-x", "repo": "r/kev-x", "revision": "abc", "card": "docs/card.md", "locked": "runs/locked.json",
+             "expect": {"adapter_model.safetensors": hashlib.sha256(payload).hexdigest()}}
+    assert card_problems((root / "docs/card.md").read_text(encoding="utf-8")) == ["{{VALIDATED_CONTEXT_4B}}"]
+    assert check_asset(asset, root) == ["kev-x: card docs/card.md still has {{VALIDATED_CONTEXT_4B}}"]
+    (root / "docs/card.md").write_text("Validated context: 16,384 tokens\n", encoding="utf-8")
+    assert check_asset(asset, root) == []
+
+    def download(content):
+        def fake(repo, revision, local_dir):
+            os.makedirs(local_dir, exist_ok=True)
+            for name, data in {"adapter_model.safetensors": content, "head.pt": b"head", "README.md": b"old card", ".gitattributes": b""}.items():
+                with open(os.path.join(local_dir, name), "wb") as f: f.write(data)
+        return fake
+
+    with pytest.raises(SystemExit, match="sha256"):
+        stage(asset, tmp_path / "w0", root, download(b"tampered"))
+    staged = stage(asset, tmp_path / "w1", root, download(payload))
+    assert sorted(p.name for p in staged.iterdir()) == ["README.md", "adapter_model.safetensors", "head.pt", "locked_test.json"]
+    assert (staged / "README.md").read_text(encoding="utf-8") == "Validated context: 16,384 tokens\n"
+    first = deterministic_tar(staged, tmp_path / "a.tar.gz")
+    os.utime(staged / "head.pt", (1, 1))
+    again = stage(asset, tmp_path / "w2", root, download(payload))
+    assert deterministic_tar(again, tmp_path / "b.tar.gz") == first
+    with tarfile.open(tmp_path / "a.tar.gz") as tar:
+        assert tar.getnames() == ["kev-x", "kev-x/README.md", "kev-x/adapter_model.safetensors", "kev-x/head.pt", "kev-x/locked_test.json"]
+        assert {m.mtime for m in tar.getmembers()} == {0}
+    sums = write_sums({"b.tar.gz": "2" * 64, "a.tar.gz": first}, tmp_path)
+    assert sums.read_text(encoding="utf-8") == f"{first}  a.tar.gz\n{'2' * 64}  b.tar.gz\n"
