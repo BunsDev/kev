@@ -150,7 +150,9 @@ modal volume delete kev-hf-cache   # optional: the cached weights (shared with k
   Deploying with `KEV_TRUNCATE_STATES=1` reads only the first 65,536 tokens instead, and then every response carries
   `truncated` and `usage.state_tokens` / `state_tokens_used`. Kev-27B
   trained on states of up to 32,768 tokens and the smaller models on 384, so all four accept long documents but Kev-27B
-  answers them best. The first long request after a start is slow: Kev-27B on an H200 took 15 s for a 15.8k-token
-  state, and 0.36 s for the same request again (state cached); a 70k-token state read to 65,536 tokens with
-  `KEV_TRUNCATE_STATES=1` took 12 s, then 0.29 s (`runs/kev-deploy-2ea5660` in the repo).
+  answers them best. A new long state is slow, a repeated one is served from the prefix cache: Kev-27B on an H200 took
+  8-10 s for a 60k-token state and 0.28 s for the same request again; a 70k-token state read to 65,536 tokens with
+  `KEV_TRUNCATE_STATES=1` took 12 s, then 0.29 s. The cache holds 65,536 state tokens in all, so a new state that long
+  replaces the cached one, which is dropped before the new state's pass rather than after it (no second copy resident)
+  (`runs/kev-deploy-71d4829` and `runs/kev-deploy-2ea5660` in the repo).
 - **Logs**: `modal app logs kev` shows the load line (`serving <model> on <GPU> ... ready in Ns`) and every request.
