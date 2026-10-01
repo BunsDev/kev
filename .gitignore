@@ -602,6 +602,17 @@ runs/r28-*-tsheld/
 runs/r29-*-tsheld/
 runs/r28-*-ood/rows.json
 runs/r29-*-ood/rows.json
+# phase B (2026-10-01): the agents-ood-v1 / guardrails-ood-v1 rows are private like the ood-v2 rows (held-out records of
+# sft-v2's private components; jaredpalmer/kev-private-train, runs/r28-readout/private-rows.json); reports stay here.
+# r28-4b-r10-agentsood-t10800 is the volume name of the re-read copied to runs/r28-4b-r10-agentsood.
+runs/r28-*-agentsood/rows.json
+runs/r29-*-agentsood/rows.json
+runs/r28-*-guardood/rows.json
+runs/r29-*-guardood/rows.json
+runs/r28-4b-r10-agentsood-t10800/
+# round 29's read-out (aggregates only; no tasksource-heldout family names)
+!runs/r29-readout/
+!runs/r29-readout/*
 !runs/fam-4b-breadth/rows.json
 !runs/fam-08b-breadth/rows.json
 !runs/fam-9b-breadth/rows.json
